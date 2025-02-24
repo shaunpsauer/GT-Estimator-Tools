@@ -474,9 +474,7 @@ export const Sd09 = ({
               const projectsToSave = projects.filter(p => selectedProjects.has(p.id));
               onSaveProjects(projectsToSave);
               // Save to database
-              projectsToSave.forEach(async (project) => {
-                await db.addProject(project);
-              });
+              handleAddToMyProjects();
               setSelectedProjects(new Set());
             }
           }}

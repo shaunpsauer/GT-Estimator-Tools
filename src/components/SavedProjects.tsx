@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Project, VisibleColumns } from "../types/Project";
-import { MinusCircle } from "react-feather";
+import { MinusCircle, PlusCircle } from "react-feather";
 import { ToggleSwitch } from "./ToggleSwitch";
 import ProjectDetails from "./ProjectDetails";
 import SearchBar from "./SearchBar";
@@ -21,7 +21,11 @@ export const SavedProjects = ({
   const [expandedProject, setExpandedProject] = useState<Project | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
-
+  const [pinnedColumns, setPinnedColumns] = useState<{[key: string]: boolean}>({
+    pmoId: false,
+    order: false,
+  });
+  
   const handleRemoveProjects = async () => {
     const selectedProjectsList = projects.filter(p => selectedProjects.has(p.id));
     
@@ -86,10 +90,22 @@ export const SavedProjects = ({
     'unitCapture'
   ];
 
-  const handleSearch = (terms: string, _isApplied: boolean, isCleared: boolean) => {
-    setSearchValue(terms);
+  const handleSearch = (terms: string, isApplied: boolean, isCleared: boolean) => {
     if (isCleared) {
+      setSearchValue('');
       setAppliedFilters([]);
+      return;
+    }
+    
+    if (isApplied) {
+      // Add current search to applied filters
+      if (terms.trim()) {
+        setAppliedFilters(prev => [...prev, terms.trim()]);
+        setSearchValue('');
+      }
+    } else {
+      // Update current search term
+      setSearchValue(terms);
     }
   };
 
@@ -196,12 +212,18 @@ export const SavedProjects = ({
     whiteSpace: "nowrap" as const,
   });
 
+  const togglePinnedColumn = (column: string) => {
+    setPinnedColumns(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
+  };
+
   return (
     <div style={{
-      marginTop: "25px",
-      marginBottom: "25px",
-      maxWidth: "calc(100% - 50px)",
-      width: "100%",
+      margin: "25px auto",
+      width: "calc(100% - 50px)",
+      maxWidth: "100%",
       background: "white",
       borderRadius: "8px",
       padding: "20px",
@@ -212,28 +234,63 @@ export const SavedProjects = ({
       flexDirection: "column",
     }}>
       <div style={{
-        backgroundColor: "var(--primary-color)",
-        color: "white",
-        padding: "10px 20px",
-        marginBottom: "20px",
-        borderRadius: "4px",
-        fontWeight: "bold",
-        textAlign: "center"
+        width: "100%",
+        textAlign: "center",
+        marginBottom: "20px"
       }}>
+        <h2 style={{
+          fontSize: "22px",
+          fontWeight: "bold",
+          color: "white",
+          background: "var(--primary-color)",
+          margin: 0,
+        }}>
         Saved Projects
+        </h2>
       </div>
 
-      <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
-        <button className="button" style={{ padding: "8px 16px" }}>
-          Pin PMO ID
+      <div style={{ marginBottom: "10px", display: "flex", gap: "10px" }}>
+        <button
+          onClick={() => togglePinnedColumn('pmoId')}
+          style={{
+            padding: "4px 8px",
+            backgroundColor: pinnedColumns.pmoId ? "var(--primary-color)" : "#f8f9fa",
+            color: pinnedColumns.pmoId ? "white" : "black",
+            border: "1px solid var(--border-color)",
+            borderRadius: "4px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px"
+          }}
+        >
+          {pinnedColumns.pmoId ? "Unpin" : "Pin"} PMO ID
+          {pinnedColumns.pmoId ? <MinusCircle size={14} /> : <PlusCircle size={14} />}
         </button>
-        <button className="button" style={{ padding: "8px 16px" }}>
-          Pin Order
+
+        <button
+          onClick={() => togglePinnedColumn('order')}
+          style={{
+            padding: "4px 8px",
+            backgroundColor: pinnedColumns.order ? "var(--primary-color)" : "#f8f9fa",
+            color: pinnedColumns.order ? "white" : "black",
+            border: "1px solid var(--border-color)",
+            borderRadius: "4px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px"
+          }}
+        >
+          {pinnedColumns.order ? "Unpin" : "Pin"} Order
+          {pinnedColumns.order ? <MinusCircle size={14} /> : <PlusCircle size={14} />}
         </button>
       </div>
 
       <div style={{ marginBottom: "20px" }}>
-        <SearchBar onSearch={handleSearch} />
+        <SearchBar 
+          onSearch={handleSearch}
+        />
       </div>
 
       <div className="table-container" style={{
@@ -273,8 +330,20 @@ export const SavedProjects = ({
                   }}
                 />
               </th>
+              {pinnedColumns.pmoId && (
+                <th style={{
+                  ...getCellStyle(true, 'pmoId', true),
+                  width: "80px",
+                }}>PMO ID</th>
+              )}
+              {pinnedColumns.order && (
+                <th style={{
+                  ...getCellStyle(true, 'order', true),
+                  width: "80px",
+                }}>Order</th>
+              )}
               {settingsOrder.map((column) => 
-                visibleColumns[column] && (
+                visibleColumns[column] && !pinnedColumns[column] && (
                   <th key={column} style={getCellStyle(false, undefined, true)}>
                     {formatColumnHeader(column)}
                   </th>
@@ -293,11 +362,23 @@ export const SavedProjects = ({
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = project.id % 2 === 0 ? "#f8f9fa" : "transparent")}
-                onClick={() => setExpandedProject(project)}
+                onClick={(e) => {
+                  // Prevent showing project details if clicking the toggle switch or its container
+                  if (e.target instanceof Element && (
+                    e.target.closest('.toggle-switch') || 
+                    e.target.closest('td:first-child')
+                  )) {
+                    e.stopPropagation();
+                    return;
+                  }
+                  setExpandedProject(project);
+                }}
               >
                 <td style={{
                   ...getCellStyle(true, 'select', false, index),
-                }}>
+                }}
+                onClick={(e) => e.stopPropagation()}
+                >
                   <ToggleSwitch
                     checked={selectedProjects.has(project.id)}
                     onChange={() => {
@@ -311,8 +392,18 @@ export const SavedProjects = ({
                     }}
                   />
                 </td>
+                {pinnedColumns.pmoId && (
+                  <td style={{
+                    ...getCellStyle(true, 'pmoId', false, index),
+                  }}>{project.pmoId}</td>
+                )}
+                {pinnedColumns.order && (
+                  <td style={{
+                    ...getCellStyle(true, 'order', false, index),
+                  }}>{project.order}</td>
+                )}
                 {settingsOrder.map((column) => 
-                  visibleColumns[column] && (
+                  visibleColumns[column] && !pinnedColumns[column] && (
                     <td key={column} style={getCellStyle(false, undefined, false, index)}>
                       {formatCellValue(column, project[column])}
                     </td>
