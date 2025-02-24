@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    // ... existing options ...
+  },
+  "include": ["./**/*.ts", "./**/*.tsx"]
+} 
