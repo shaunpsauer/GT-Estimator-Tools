@@ -28,7 +28,21 @@ export const SavedProjects = ({
     pmoId: false,
     order: false,
   });
-  const [existingProjectIds, setExistingProjectIds] = useState<Set<number>>(new Set());
+  const [, setExistingProjectIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    loadExistingProjects();
+  }, []);
+
+  const loadExistingProjects = async () => {
+    try {
+      const existingProjects = await db.getProjects();
+      setExistingProjectIds(new Set(existingProjects.map(p => p.id)));
+    } catch (error) {
+      console.error('Error loading existing projects:', error);
+    }
+  };
+
   const handleRemoveProjects = async () => {
     const selectedProjectsList = projects.filter(p => selectedProjects.has(p.id));
     
@@ -94,20 +108,7 @@ export const SavedProjects = ({
     'unitCapture'
   ];
 
-  useEffect(() => {
-    loadExistingProjects();
-  }, []);
-
-  const loadExistingProjects = async () => {
-    try {
-      const existingProjects = await db.getProjects();
-      setExistingProjectIds(new Set(existingProjects.map(p => p.id)));
-    } catch (error) {
-      console.error('Error loading existing projects:', error);
-    }
-  };
-
-  const formatCellValue = (column: string, value: any) => {
+  const formatCellValue = (column: string, value: any, project: Project) => {
     const dateColumns = [
       'class5', 'class4', 'class3', 'class2', 
       'negotiatePrice', 'jeReadyToRoute', 'jeApproved',
@@ -120,12 +121,31 @@ export const SavedProjects = ({
       'ifc', 'ntp', 'mob', 'tieIn', 'enro', 'unitCapture'
     ];
 
-    if (dateColumns.includes(column) && value) {
-      if (typeof value === 'string' && value.includes('/')) return value;
-      return value;
+    const hasChanged = project._changes && column in project._changes;
+    
+    const cellContent = dateColumns.includes(column) && value ? 
+      (typeof value === 'string' && value.includes('/') ? value : value) :
+      (value !== undefined ? String(value) : 'N/A');
+
+    if (hasChanged) {
+      return (
+        <div
+          style={{
+            backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow highlight
+            padding: '2px 4px',
+            borderRadius: '2px',
+            position: 'relative',
+            cursor: 'help'
+          }}
+          title={`Changed from: ${project._changes![column as keyof Project]}`}
+        >
+          {cellContent}
+        </div>
+      );
     }
-    return value !== undefined ? String(value) : 'N/A';
-    };
+
+    return cellContent;
+  };
 
   const formatColumnName = (column: string): string => {
     const formattedLabels: Record<string, string> = {
@@ -250,9 +270,11 @@ export const SavedProjects = ({
     ) : undefined,
     top: isHeader ? 0 : undefined,
     zIndex: isHeader ? (isPinned ? 3 : 2) : (isPinned ? 1 : 0),
-    backgroundColor: isPinned 
-      ? (isHeader ? "#e9ecef" : (rowIndex !== undefined && rowIndex % 2 === 0 ? "#f8f9fa" : "white"))
-      : (isHeader ? "#e9ecef" : "inherit"),
+    backgroundColor: isHeader 
+      ? "#e9ecef"  // Header background
+      : isPinned 
+        ? (rowIndex !== undefined && rowIndex % 2 === 0 ? "#f8f9fa" : "white")  // Pinned cells match row pattern
+        : "inherit",  // Non-pinned cells inherit from row
     height: isHeader ? "24px" : "32px",
     ...(isPinned ? {
       borderRight: "1px solid var(--border-color)",
@@ -412,11 +434,11 @@ export const SavedProjects = ({
                 key={project.id}
                 style={{
                   cursor: "pointer",
-                  backgroundColor: project.id % 2 === 0 ? "#f8f9fa" : "transparent",
+                  backgroundColor: index % 2 === 0 ? "#f8f9fa" : "white",
                   transition: "background-color 0.2s",
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = project.id % 2 === 0 ? "#f8f9fa" : "transparent")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = index % 2 === 0 ? "#f8f9fa" : "white")}
                 onClick={(e) => {
                     if ((e.target as HTMLElement).closest("td")?.cellIndex === 0) return;
                   setExpandedProject(project);
@@ -437,13 +459,13 @@ export const SavedProjects = ({
                 )}
                 {pinnedColumns.order && (
                   <td style={{
-                      ...getCellStyle(true, 'order'),
+                    ...getCellStyle(true, 'order', false, index),
                   }}>{project.order}</td>
                 )}
                 {settingsOrder.map((column) => 
                   visibleColumns[column] && !pinnedColumns[column] && (
                       <td key={column} style={getCellStyle()}>
-                        {formatCellValue(column, project[column as keyof Project])}
+                        {formatCellValue(column, project[column as keyof Project], project)}
                     </td>
                   )
                 )}

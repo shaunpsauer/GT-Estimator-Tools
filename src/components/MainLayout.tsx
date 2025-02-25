@@ -3,7 +3,7 @@ import Sidebar from './Sidebar';
 import Sd09 from './Sd09';
 import SavedProjects from './SavedProjects';
 import { SettingsCard } from './SettingsCard';
-import { Project, VisibleColumns } from '../types/Project';
+import { Project, VisibleColumns, ProjectChanges } from '../types/Project';
 import '../styles/global.css';
 import { storageService } from '../services/storageService';
 import { db } from '../services/db';
@@ -116,9 +116,80 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
   };
 
   const handleProjectsLoad = async (newProjects: Project[]) => {
-    setProjects(newProjects);
-    onProjectsLoad?.(newProjects);
+    // Load existing saved projects to compare against
+    const existingSaved = await db.getProjects();
+    
+    // Merge new projects with existing ones, updating when identifiers match
+    setProjects(prevProjects => {
+      const mergedProjects = [...prevProjects];
+      
+      newProjects.forEach(newProject => {
+        const existingIndex = mergedProjects.findIndex(p => p.id === newProject.id);
+        const savedVersion = existingSaved.find(p => p.id === newProject.id);
+        
+        if (existingIndex >= 0) {
+          // Compare with saved version if exists
+          const changes: ProjectChanges = {};
+          if (savedVersion) {
+            Object.keys(newProject).forEach(key => {
+              if (key !== '_changes' && 
+                  key !== 'is_changed' && 
+                  key !== 'last_updated' &&
+                  newProject[key as keyof Project] !== savedVersion[key as keyof Project]) {
+                const value = savedVersion[key as keyof Project];
+                if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === undefined) {
+                  changes[key] = value;
+                }
+              }
+            });
+          }
+
+          // Update existing project
+          mergedProjects[existingIndex] = {
+            ...newProject,
+            _changes: Object.keys(changes).length > 0 ? changes : undefined,
+            is_changed: Object.keys(changes).length > 0,
+            last_updated: new Date().toISOString()
+          };
+        } else {
+          // Add new project
+          mergedProjects.push(newProject);
+        }
+      });
+      
+      return mergedProjects;
+    });
+
+    // Update storage
     storageService.saveProjects(newProjects);
+    
+    // Update saved projects if they exist in the new data
+    setSavedProjects(prevSaved => {
+      const updatedSaved = prevSaved.map(savedProject => {
+        const updatedVersion = newProjects.find(p => p.id === savedProject.id);
+        if (updatedVersion) {
+          return {
+            ...updatedVersion,
+            last_updated: new Date().toISOString()
+          };
+        }
+        return savedProject;
+      });
+
+      // Update IndexedDB
+      updatedSaved.forEach(async (project) => {
+        try {
+          await db.deleteProject(project.id);
+          await db.addProject(project);
+        } catch (error) {
+          console.error('Error updating project in DB:', error);
+        }
+      });
+
+      return updatedSaved;
+    });
+
+    onProjectsLoad?.(newProjects);
   };
 
   return (

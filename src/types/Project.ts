@@ -1,3 +1,7 @@
+export interface ProjectChanges {
+  [key: string]: string | number | boolean | undefined;
+}
+
 export interface Project {
   id: number;
   costEstimator: string;
@@ -38,7 +42,8 @@ export interface Project {
   county: string;
   last_updated?: string;
   is_changed?: boolean;
-  [key: string]: string | number | boolean | undefined;
+  _changes?: ProjectChanges;
+  [key: string]: string | number | boolean | undefined | ProjectChanges | undefined;
 }
 
 export interface VisibleColumns {
@@ -65,7 +70,7 @@ export interface VisibleColumns {
   engrPlanYear: boolean;
   constructionPlanYear: boolean;
   commitmentDate: boolean;
-  thirtyPercentDesignReviewMeeting: string;
+  thirtyPercentDesignReviewMeeting: boolean;
   thirtyPercentDesignAvailable: boolean;
   sixtyPercentDesignReviewMeeting: boolean;
   sixtyPercentDesignAvailable: boolean;
