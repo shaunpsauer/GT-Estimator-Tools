@@ -207,17 +207,28 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
         onProjectsLoad={handleProjectsLoad}
       />
 
+
       <main style={{
         flex: 1,
-        padding: 'var(--spacing-lg)',
+        padding: 'var(--spacing-sm)',
         backgroundColor: 'var(--bg-secondary)',
         transition: 'margin-left 0.3s ease-in-out',
         marginLeft: '20px',
+        width: '100%', // Ensure main takes full width available
+        display: 'flex',
+        justifyContent: 'center', // Center the content horizontally
       }}>
-        <div className="content-container card" style={{
-          maxWidth: '2200px',
-          margin: '0 auto',
-          minHeight: 'calc(100vh - var(--spacing-xl) * 2)',
+        <div style={{
+          width: '100%', // Take full width of parent
+          maxWidth: '1200px', // Maximum width on large screens
+          margin: '0', // Remove auto margins and let flex handle centering
+          minHeight: '90vh', // Use viewport height units for responsive height
+          backgroundColor: 'var(--bg-primary)',
+          borderRadius: 'var(--border-radius-md)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}>
           {currentView === 'home' ? children : 
            currentView === 'sd09' ? (

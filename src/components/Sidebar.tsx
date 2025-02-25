@@ -146,7 +146,7 @@ const Sidebar = ({
         background: 'var(--primary-color)',
         color: 'var(--text-light)',
         height: '100vh',
-        padding: 'var(--spacing-md)',
+        //padding: 'var(--spacing-md)',
         display: 'flex',
         flexDirection: 'column',
         transition: 'width 0.3s ease-in-out',

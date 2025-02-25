@@ -292,17 +292,19 @@ export const SavedProjects = ({
 
   return (
     <div style={{
-      margin: "25px auto",
-      width: "calc(100% - 50px)",
+      margin: "0",
+      width: "100%",
+      height: "100%",
       maxWidth: "100%",
       background: "white",
-      borderRadius: "8px",
+      borderRadius: "0",
       padding: "20px",
-      boxShadow: "0 5px 35px var(--shadow-color)",
+      boxShadow: "none",
       position: "relative",
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
+      boxSizing: "border-box",
     }}>
       <div style={{
         width: "100%",
@@ -363,12 +365,7 @@ export const SavedProjects = ({
         <DateFilterButtons projects={projects} onApplyFilter={handleDateFilter} onClearFilter={handleClearDateFilter} />
       </div>
 
-      <div className="table-container" style={{
-        width: '100%',
-        overflowX: 'auto',
-        overflowY: 'auto',
-        maxHeight: 'calc(100vh - 300px)'
-      }}>
+      <div className="table-container">
         <table style={{
           width: "100%",
           borderCollapse: "collapse",

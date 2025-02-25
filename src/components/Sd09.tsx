@@ -263,17 +263,19 @@ export const Sd09 = ({
 
   return (
     <div style={{
-      margin: "25px auto",
-      width: "calc(100% - 50px)",
+      margin: "0",
+      width: "100%",
+      height: "100%",
       maxWidth: "100%",
       background: "white",
-      borderRadius: "8px",
+      borderRadius: "0",
       padding: "20px",
-      boxShadow: "0 5px 35px var(--shadow-color)",
+      boxShadow: "none",
       position: "relative",
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
+      boxSizing: "border-box",
     }}>
       <div style={{
         width: "100%",
@@ -343,172 +345,163 @@ export const Sd09 = ({
         />
       </div>
 
-     <div className="table-container" style={{
-        flex: 1,
-        width: "100%",
-        overflowX: "auto",
-        overflowY: "auto",
-        maxHeight: "calc(80vh - 250px)",
-        position: "relative",
-        zIndex: 0,
-        marginTop: "20px",
-        border: "1px solid var(--border-light)",
-        borderRadius: "var(--border-radius-sm)",
-        minWidth: 0,
-      }}>
-        <table style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          textAlign: "left",
-          position: "relative",
-        }}>
-          <thead>
-            <tr style={{ background: "var(--bg-secondary)" }}>
-              <th style={{
-                ...getCellStyle(true, 'select', true),
-                width: "80px",
-                minWidth: "80px",
-              }}>
-                <ToggleSwitch
-                  checked={selectedProjects.size === filteredProjects.length}
-                  onChange={handleSelectAll}
-                  label="Select All"
-                />
-              </th>
-              {pinnedColumns.pmoId && (
-                <th style={{
-                  ...getCellStyle(true, 'pmoId', true),
-                  width: "80px",
-                }}>PMO ID</th>
-              )}
-              {pinnedColumns.order && (
-                <th style={{
-                  ...getCellStyle(true, 'order', true),
-                  width: "80px",
-                }}>Order</th>
-              )}
-              {settingsOrder.map((column) => 
-                visibleColumns[column] && !pinnedColumns[column] && (
-                  <th key={column} style={getCellStyle(false, undefined, true)}>
-                    {formatColumnName(column)}
-                  </th>
-                )
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProjects.length > 0 ? (
-              filteredProjects.map((project, index) => (
-                <tr
-                  key={project.id}
-                  style={{
-                    cursor: "pointer",
-                    backgroundColor: project.id % 2 === 0 ? "#f8f9fa" : "transparent",
-                    transition: "background-color 0.2s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = project.id % 2 === 0 ? "#f8f9fa" : "transparent")}
-                  onClick={(e) => {
-                    if ((e.target as HTMLElement).closest("td")?.cellIndex === 0) return;
-                    setExpandedProject(project);
-                  }}
-                >
-                  <td style={{
-                    ...getCellStyle(true, 'select'),
-                  }}>
-                    <ToggleSwitch
-                      checked={selectedProjects.has(project.id)}
-                      onChange={() => handleSelectProject(project)}
-                    />
-                  </td>
-                  {pinnedColumns.pmoId && (
-                    <td style={{
-                      ...getCellStyle(true, 'pmoId', false, index),
-                    }}>{project.pmoId}</td>
-                  )}
-                  {pinnedColumns.order && (
-                    <td style={{
-                      ...getCellStyle(true, 'order'),
-                    }}>{project.order}</td>
-                  )}
-                  {settingsOrder.map((column) => 
-                    visibleColumns[column] && !pinnedColumns[column] && (
-                      <td key={column} style={getCellStyle()}>
-                        {formatCellValue(column, project[column as keyof Project])}
-                      </td>
-                    )
-                  )}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={Object.keys(visibleColumns).length} style={{ 
-                  textAlign: "center", 
-                  padding: "20px" 
-                }}>
-                  {projects.length === 0 ? 
-                    "Please select an Excel file to load projects" : 
-                    "No matching results found"}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+     <div className="table-container">
+       <table style={{
+         width: "100%",
+         borderCollapse: "collapse",
+         textAlign: "left",
+         position: "relative",
+         paddingRight: "20px",
+         marginRight: "-20px",
+         boxSizing: "border-box",
+       }}>
+         <thead>
+           <tr style={{ background: "var(--bg-secondary)" }}>
+             <th style={{
+               ...getCellStyle(true, 'select', true),
+               width: "80px",
+               minWidth: "80px",
+             }}>
+               <ToggleSwitch
+                 checked={selectedProjects.size === filteredProjects.length}
+                 onChange={handleSelectAll}
+                 label="Select All"
+               />
+             </th>
+             {pinnedColumns.pmoId && (
+               <th style={{
+                 ...getCellStyle(true, 'pmoId', true),
+                 width: "80px",
+               }}>PMO ID</th>
+             )}
+             {pinnedColumns.order && (
+               <th style={{
+                 ...getCellStyle(true, 'order', true),
+                 width: "80px",
+               }}>Order</th>
+             )}
+             {settingsOrder.map((column) => 
+               visibleColumns[column] && !pinnedColumns[column] && (
+                 <th key={column} style={getCellStyle(false, undefined, true)}>
+                   {formatColumnName(column)}
+                 </th>
+               )
+             )}
+           </tr>
+         </thead>
+         <tbody>
+           {filteredProjects.length > 0 ? (
+             filteredProjects.map((project, index) => (
+               <tr
+                 key={project.id}
+                 style={{
+                   cursor: "pointer",
+                   backgroundColor: project.id % 2 === 0 ? "#f8f9fa" : "transparent",
+                   transition: "background-color 0.2s",
+                 }}
+                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
+                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = project.id % 2 === 0 ? "#f8f9fa" : "transparent")}
+                 onClick={(e) => {
+                   if ((e.target as HTMLElement).closest("td")?.cellIndex === 0) return;
+                   setExpandedProject(project);
+                 }}
+               >
+                 <td style={{
+                   ...getCellStyle(true, 'select'),
+                 }}>
+                   <ToggleSwitch
+                     checked={selectedProjects.has(project.id)}
+                     onChange={() => handleSelectProject(project)}
+                   />
+                 </td>
+                 {pinnedColumns.pmoId && (
+                   <td style={{
+                     ...getCellStyle(true, 'pmoId', false, index),
+                   }}>{project.pmoId}</td>
+                 )}
+                 {pinnedColumns.order && (
+                   <td style={{
+                     ...getCellStyle(true, 'order'),
+                   }}>{project.order}</td>
+                 )}
+                 {settingsOrder.map((column) => 
+                   visibleColumns[column] && !pinnedColumns[column] && (
+                     <td key={column} style={getCellStyle()}>
+                       {formatCellValue(column, project[column as keyof Project])}
+                     </td>
+                   )
+                 )}
+               </tr>
+             ))
+           ) : (
+             <tr>
+               <td colSpan={Object.keys(visibleColumns).length} style={{ 
+                 textAlign: "center", 
+                 padding: "20px" 
+               }}>
+                 {projects.length === 0 ? 
+                   "Please select an Excel file to load projects" : 
+                   "No matching results found"}
+               </td>
+             </tr>
+           )}
+         </tbody>
+       </table>
+     </div>
 
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginTop: "20px",
-        padding: "0 20px"
-      }}>
-        <button
-          onClick={() => {
-            if (selectedProjects.size > 0 && onSaveProjects) {
-              const projectsToSave = projects.filter(p => selectedProjects.has(p.id));
-              onSaveProjects(projectsToSave);
-              // Save to database
-              handleAddToMyProjects();
-              setSelectedProjects(new Set());
-            }
-          }}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "var(--primary-color)",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: selectedProjects.size === 0 ? "not-allowed" : "pointer",
-            opacity: selectedProjects.size === 0 ? 0.6 : 1
-          }}
-        >
-          Save Selected ({selectedProjects.size})
-        </button>
+     <div style={{
+       display: "flex",
+       justifyContent: "space-between",
+       alignItems: "center",
+       marginTop: "20px",
+       padding: "0 20px"
+     }}>
+       <button
+         onClick={() => {
+           if (selectedProjects.size > 0 && onSaveProjects) {
+             const projectsToSave = projects.filter(p => selectedProjects.has(p.id));
+             onSaveProjects(projectsToSave);
+             // Save to database
+             handleAddToMyProjects();
+             setSelectedProjects(new Set());
+           }
+         }}
+         style={{
+           padding: "8px 16px",
+           backgroundColor: "var(--primary-color)",
+           color: "white",
+           border: "none",
+           borderRadius: "4px",
+           cursor: selectedProjects.size === 0 ? "not-allowed" : "pointer",
+           opacity: selectedProjects.size === 0 ? 0.6 : 1
+         }}
+       >
+         Save Selected ({selectedProjects.size})
+       </button>
 
-        <div style={{
-          backgroundColor: "var(--bg-tertiary)",
-          color: "black",
-          borderRadius: "4px",
-          padding: "6px 12px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: "bold",
-          fontSize: "14px"
-        }}>
-          Showing {filteredProjects.length} Items
-        </div>
-      </div>
+       <div style={{
+         backgroundColor: "var(--bg-tertiary)",
+         color: "black",
+         borderRadius: "4px",
+         padding: "6px 12px",
+         display: "flex",
+         alignItems: "center",
+         justifyContent: "center",
+         fontWeight: "bold",
+         fontSize: "14px"
+       }}>
+         Showing {filteredProjects.length} Items
+       </div>
+     </div>
 
-      {expandedProject && (
-        <ProjectDetails 
-          project={expandedProject} 
-          onClose={() => setExpandedProject(null)} 
-        />
-      )}
-    </div>
-  );
+     {expandedProject && (
+       <ProjectDetails 
+         project={expandedProject} 
+         onClose={() => setExpandedProject(null)} 
+       />
+     )}
+   </div>
+ );
 };
 
 export default Sd09; 
