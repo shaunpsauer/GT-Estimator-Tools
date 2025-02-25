@@ -21,13 +21,14 @@ export const Sd09 = ({
 }: Sd09Props) => {
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(new Set());
   const [expandedProject, setExpandedProject] = useState<Project | null>(null);
+  const [searchValue, setSearchValue] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState<string[]>([])
   const [pinnedColumns, setPinnedColumns] = useState<{[key: string]: boolean}>({
     pmoId: false,
     order: false,
   });
   const [existingProjectIds, setExistingProjectIds] = useState<Set<number>>(new Set());
-  const [searchValue, setSearchValue] = useState('');
-  const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
+;
 
   const settingsOrder: (keyof VisibleColumns)[] = [
     'costEstimator',
@@ -63,6 +64,7 @@ export const Sd09 = ({
     'jeReadyToRoute',
     'jeApproved',
     'estimateAnalysis',
+    'thirtyPercentDesignReviewMeeting',
     'thirtyPercentDesignAvailable',
     'sixtyPercentDesignReviewMeeting',
     'sixtyPercentDesignAvailable',
@@ -93,6 +95,7 @@ export const Sd09 = ({
     const dateColumns = [
       'class5', 'class4', 'class3', 'class2', 
       'negotiatePrice', 'jeReadyToRoute', 'jeApproved',
+      'thirtyPercentDesignReviewMeeting',
       'thirtyPercentDesignAvailable',
       'sixtyPercentDesignReviewMeeting',
       'sixtyPercentDesignAvailable',
@@ -140,6 +143,7 @@ export const Sd09 = ({
       commitmentDate: "Commit Date",
       
       // Milestones
+      thirtyPercentDesignReviewMeeting: "30% Review",
       thirtyPercentDesignAvailable: "30% Design",
       sixtyPercentDesignReviewMeeting: "60% Review",
       sixtyPercentDesignAvailable: "60% Design",
@@ -274,10 +278,10 @@ export const Sd09 = ({
       <div style={{
         width: "100%",
         textAlign: "center",
-        marginBottom: "20px",
+        marginBottom: "20px"
       }}>
         <h2 style={{
-          fontSize: "22px",
+          fontSize: "30px",
           fontWeight: "bold",
           color: "white",
           background: "var(--primary-color)",

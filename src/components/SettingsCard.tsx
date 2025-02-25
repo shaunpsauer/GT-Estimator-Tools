@@ -162,6 +162,7 @@ export const SettingsCard = ({
     'jeReadyToRoute',
     'jeApproved',
     'estimateAnalysis',
+    'thirtyPercentDesignReviewMeeting',
     'thirtyPercentDesignAvailable',
     'sixtyPercentDesignReviewMeeting',
     'sixtyPercentDesignAvailable',
@@ -267,7 +268,7 @@ export const SettingsCard = ({
             <Box key={key} display="flex" alignItems="center" justifyContent="space-between" paddingY={0.5}>
               <Typography variant="body1">{formatLabel(key)}</Typography>
               <ToggleSwitch
-                checked={settings[key as keyof VisibleColumns] ?? false}
+                checked={!!settings[key as keyof VisibleColumns]}
                 onChange={() => toggleSetting(key as keyof VisibleColumns)}
               />
             </Box>

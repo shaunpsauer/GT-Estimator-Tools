@@ -51,6 +51,7 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
       title: "Design Milestones",
       fields: [
         { key: "engrPlanYear", label: "Engineering Plan Year" },
+        { key: "thirtyPercentDesignReviewMeeting", label: "30% Design Review Meeting"},
         { key: "thirtyPercentDesignAvailable", label: "30% Design Available" },
         { key: "sixtyPercentDesignReviewMeeting", label: "60% Design Review Meeting" },
         { key: "sixtyPercentDesignAvailable", label: "60% Design Available" },

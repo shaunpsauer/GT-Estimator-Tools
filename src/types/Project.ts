@@ -13,6 +13,7 @@ export interface Project {
   engrPlanYear: string;
   constructionPlanYear: string;
   commitmentDate: string;
+  thirtyPercentDesignReviewMeeting: string;
   thirtyPercentDesignAvailable: string;
   sixtyPercentDesignReviewMeeting: string;
   sixtyPercentDesignAvailable: string;
@@ -64,6 +65,7 @@ export interface VisibleColumns {
   engrPlanYear: boolean;
   constructionPlanYear: boolean;
   commitmentDate: boolean;
+  thirtyPercentDesignReviewMeeting: string;
   thirtyPercentDesignAvailable: boolean;
   sixtyPercentDesignReviewMeeting: boolean;
   sixtyPercentDesignAvailable: boolean;

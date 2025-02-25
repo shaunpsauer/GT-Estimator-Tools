@@ -1,31 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Project, VisibleColumns } from "../types/Project";
-import { MinusCircle, PlusCircle } from "react-feather";
+import { PlusCircle, MinusCircle } from "react-feather";
 import { ToggleSwitch } from "./ToggleSwitch";
+import { db } from "../services/db";
 import ProjectDetails from "./ProjectDetails";
 import SearchBar from "./SearchBar";
-import { db } from '../services/db';
+
 
 interface SavedProjectsProps {
   projects: Project[];
   visibleColumns: VisibleColumns;
+  onSelectedProjectsChange?: (projects: Project[]) => void;
   onRemoveProjects?: (projects: Project[]) => void;
 }
 
 export const SavedProjects = ({
   projects,
   visibleColumns,
+  onSelectedProjectsChange,
   onRemoveProjects,
 }: SavedProjectsProps) => {
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(new Set());
   const [expandedProject, setExpandedProject] = useState<Project | null>(null);
   const [searchValue, setSearchValue] = useState('');
-  const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState<string[]>([])
   const [pinnedColumns, setPinnedColumns] = useState<{[key: string]: boolean}>({
     pmoId: false,
     order: false,
   });
-  
+  const [existingProjectIds, setExistingProjectIds] = useState<Set<number>>(new Set());
   const handleRemoveProjects = async () => {
     const selectedProjectsList = projects.filter(p => selectedProjects.has(p.id));
     
@@ -77,6 +80,7 @@ export const SavedProjects = ({
     'jeReadyToRoute',
     'jeApproved',
     'estimateAnalysis',
+    'thirtyPercentDesignReviewMeeting',
     'thirtyPercentDesignAvailable',
     'sixtyPercentDesignReviewMeeting',
     'sixtyPercentDesignAvailable',
@@ -90,103 +94,148 @@ export const SavedProjects = ({
     'unitCapture'
   ];
 
-  const handleSearch = (terms: string, isApplied: boolean, isCleared: boolean) => {
-    if (isCleared) {
-      setSearchValue('');
-      setAppliedFilters([]);
-      return;
-    }
-    
-    if (isApplied) {
-      // Add current search to applied filters
-      if (terms.trim()) {
-        setAppliedFilters(prev => [...prev, terms.trim()]);
-        setSearchValue('');
-      }
-    } else {
-      // Update current search term
-      setSearchValue(terms);
+  useEffect(() => {
+    loadExistingProjects();
+  }, []);
+
+  const loadExistingProjects = async () => {
+    try {
+      const existingProjects = await db.getProjects();
+      setExistingProjectIds(new Set(existingProjects.map(p => p.id)));
+    } catch (error) {
+      console.error('Error loading existing projects:', error);
     }
   };
 
-  const filteredProjects = projects.filter(project => {
-    if (!searchValue && appliedFilters.length === 0) return true;
-    
-    const searchTerms = [...appliedFilters, searchValue].filter(Boolean);
-    return searchTerms.some(term => {
-      const searchTerm = term.toLowerCase();
-      return Object.entries(project).some(([key, value]) => {
-        if (visibleColumns[key as keyof VisibleColumns]) {
-          return String(value).toLowerCase().includes(searchTerm);
-        }
-        return false;
-      });
-    });
-  });
+  const formatCellValue = (column: string, value: any) => {
+    const dateColumns = [
+      'class5', 'class4', 'class3', 'class2', 
+      'negotiatePrice', 'jeReadyToRoute', 'jeApproved',
+      'thirtyPercentDesignReviewMeeting',
+      'thirtyPercentDesignAvailable',
+      'sixtyPercentDesignReviewMeeting',
+      'sixtyPercentDesignAvailable',
+      'ninetyPercentDesignReviewMeeting',
+      'ninetyPercentDesignAvailable',
+      'ifc', 'ntp', 'mob', 'tieIn', 'enro', 'unitCapture'
+    ];
 
-  const formatColumnHeader = (key: string): string => {
-    const capitalizeWords = (str: string) => {
-      return str
-        .split(/(?=[A-Z])|[\s_-]/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
+    if (dateColumns.includes(column) && value) {
+      if (typeof value === 'string' && value.includes('/')) return value;
+      return value;
+    }
+    return value !== undefined ? String(value) : 'N/A';
     };
 
-    switch(key) {
-      case 'costEstimator': return 'Cost Est.';
-      case 'costEstimatorRequest': return 'Cost Est. Req.';
-      case 'projectManager': return 'PM';
-      case 'projectEngineer': return 'PE';
-      case 'designEstimator': return 'Design Est.';
-      case 'constructionContractor': return 'Const. Cont.';
-      case 'bundleId': return 'Bundle ID';
-      case 'postEstimate': return 'Post Est.';
-      case 'pmoId': return 'PMO ID';
-      case 'multipleOrder': return 'Multiple Order';
-      case 'workStream': return 'Work Stream';
-      case 'workType': return 'Work Type';
-      case 'engrPlanYear': return 'Engr Plan Year';
-      case 'constructionPlanYear': return 'Const. Plan Year';
-      case 'commitmentDate': return 'Commit. Date';
-      case 'ade': return 'ADE';
-      case 'mat': return 'MAT';
-      case 'mp1': return 'MP1';
-      case 'mp2': return 'MP2';
-      case 'ifc': return 'IFC';
-      case 'mob': return 'MOB';
-      case 'thirtyPercentDesignAvailable': return '30% Design';
-      case 'sixtyPercentDesignReviewMeeting': return '60% Review';
-      case 'sixtyPercentDesignAvailable': return '60% Design';
-      case 'ninetyPercentDesignReviewMeeting': return '90% Review';
-      case 'ninetyPercentDesignAvailable': return '90% Design';
-      case 'jeReadyToRoute': return 'JE Ready';
-      case 'jeApproved': return 'JE Approved';
-      case 'estimateAnalysis': return 'Est. Analysis';
-      case 'negotiatePrice': return 'Neg. Price';
-      default: return capitalizeWords(key);
+  const formatColumnName = (column: string): string => {
+    const formattedLabels: Record<string, string> = {
+      // Team Members
+      costEstimator: "Cost Est.",
+      costEstimatorRequest: "Cost Est. Req.",
+      projectManager: "PM",
+      projectEngineer: "Proj. Eng.",
+      designEstimator: "Design Est.",
+      constructionContractor: "Contractor",
+      ade: "ADE",
+      
+      // Project Info
+      pmoId: "PMO ID",
+      order: "Order",
+      multipleOrder: "Multi Order",
+      bundleId: "Bundle ID",
+      postEstimate: "Post Est.",
+      mat: "MAT",
+      projectName: "Project",
+      workStream: "Stream",
+      workType: "Type",
+      station: "Station",
+      line: "LINE",
+      city: "City",
+      county: "County",
+      
+      // Years & Dates
+      engrPlanYear: "Eng. Year",
+      constructionPlanYear: "Const. Year",
+      commitmentDate: "Commit Date",
+      
+      // Milestones
+      thirtyPercentDesignReviewMeeting: "30% Review",
+      thirtyPercentDesignAvailable: "30% Design",
+      sixtyPercentDesignReviewMeeting: "60% Review",
+      sixtyPercentDesignAvailable: "60% Design",
+      ninetyPercentDesignReviewMeeting: "90% Review",
+      ninetyPercentDesignAvailable: "90% Design",
+      ifc: "IFC",
+      class5: "CLASS 5",
+      class4: "CLASS 4",
+      class3: "CLASS 3",
+      class2: "CLASS 2",
+      negotiatePrice: "Neg. Price",
+      jeReadyToRoute: "JE Ready",
+      jeApproved: "JE Appr.",
+      estimateAnalysis: "Est. Analysis",
+      ntp: "NTP",
+      mob: "MOB",
+      mp1: "MP1",
+      mp2: "MP2",
+      tieIn: "Tie-in",
+      enro: "ENRO",
+      unitCapture: "Unit Cap."
+    };
+    
+    return formattedLabels[column] || column.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+  };
+
+  const filteredProjects = projects
+    .filter((project) => {
+      // First apply any active search term
+      if (searchValue) {
+        const searchMatch = Object.entries(project)
+          .filter(([key]) => visibleColumns[key as keyof VisibleColumns])
+          .some(([_, value]) => 
+            String(value).toLowerCase().includes(searchValue.toLowerCase())
+          );
+        if (!searchMatch) return false;
+      }
+
+      // Then apply any fixed filters
+      return appliedFilters.every(filter => {
+        return Object.entries(project)
+          .filter(([key]) => visibleColumns[key as keyof VisibleColumns])
+          .some(([_, value]) => 
+            String(value).toLowerCase().includes(filter.toLowerCase())
+          );
+      });
+    });
+
+  const handleSelectAll = () => {
+    if (selectedProjects.size === filteredProjects.length) {
+      setSelectedProjects(new Set());
+    } else {
+      const allIds = filteredProjects.map((p) => p.id);
+      setSelectedProjects(new Set(allIds));
     }
   };
 
-  const formatCellValue = (column: string, value: any): string => {
-    if (value === null || value === undefined) return '';
-    
-    switch (column) {
-      case 'thirtyPercentDesignAvailable':
-      case 'sixtyPercentDesignAvailable':
-      case 'ninetyPercentDesignAvailable':
-      case 'ifc':
-      case 'ntp':
-      case 'mob':
-      case 'tieIn':
-      case 'enro':
-        return value ? 'Yes' : 'No';
-      case 'commitmentDate':
-      case 'jeReadyToRoute':
-      case 'jeApproved':
-        return value ? new Date(value).toLocaleDateString() : '';
-      default:
-        return String(value);
+  const handleSelectProject = (project: Project) => {
+    const newSelected = new Set(selectedProjects);
+    if (selectedProjects.has(project.id)) {
+      newSelected.delete(project.id);
+    } else {
+      newSelected.add(project.id);
     }
+    setSelectedProjects(newSelected);
+    onSelectedProjectsChange?.(
+      filteredProjects.filter(p => newSelected.has(p.id))
+    );
+  };
+
+
+  const togglePinnedColumn = (column: string) => {
+    setPinnedColumns(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
   };
 
   const getCellStyle = (isPinned: boolean = false, column?: string, isHeader: boolean = false, rowIndex?: number) => ({
@@ -212,13 +261,6 @@ export const SavedProjects = ({
     whiteSpace: "nowrap" as const,
   });
 
-  const togglePinnedColumn = (column: string) => {
-    setPinnedColumns(prev => ({
-      ...prev,
-      [column]: !prev[column]
-    }));
-  };
-
   return (
     <div style={{
       margin: "25px auto",
@@ -239,7 +281,7 @@ export const SavedProjects = ({
         marginBottom: "20px"
       }}>
         <h2 style={{
-          fontSize: "22px",
+          fontSize: "30px",
           fontWeight: "bold",
           color: "white",
           background: "var(--primary-color)",
@@ -289,7 +331,24 @@ export const SavedProjects = ({
 
       <div style={{ marginBottom: "20px" }}>
         <SearchBar 
-          onSearch={handleSearch}
+          onSearch={(terms, isApplied, isCleared) => {
+            if (isCleared) {
+              setSearchValue('');
+              setAppliedFilters([]);
+              return;
+            }
+            
+            if (isApplied) {
+              // Add current search to applied filters
+              if (terms.trim()) {
+                setAppliedFilters(prev => [...prev, terms.trim()]);
+                setSearchValue('');
+              }
+            } else {
+              // Update current search term
+              setSearchValue(terms);
+            }
+          }} 
         />
       </div>
 
@@ -320,14 +379,9 @@ export const SavedProjects = ({
                 minWidth: "80px",
               }}>
                 <ToggleSwitch
-                  checked={selectedProjects.size === filteredProjects.length && filteredProjects.length > 0}
-                  onChange={() => {
-                    setSelectedProjects(
-                      selectedProjects.size === filteredProjects.length 
-                        ? new Set() 
-                        : new Set(filteredProjects.map(p => p.id))
-                    );
-                  }}
+                  checked={selectedProjects.size === filteredProjects.length}
+                  onChange={handleSelectAll}
+                  label="Select All"
                 />
               </th>
               {pinnedColumns.pmoId && (
@@ -345,14 +399,15 @@ export const SavedProjects = ({
               {settingsOrder.map((column) => 
                 visibleColumns[column] && !pinnedColumns[column] && (
                   <th key={column} style={getCellStyle(false, undefined, true)}>
-                    {formatColumnHeader(column)}
+                    {formatColumnName(column)}
                   </th>
                 )
               )}
             </tr>
           </thead>
           <tbody>
-            {filteredProjects.map((project, index) => (
+            {filteredProjects.length > 0 ? (
+              filteredProjects.map((project, index) => (
               <tr
                 key={project.id}
                 style={{
@@ -363,33 +418,16 @@ export const SavedProjects = ({
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = project.id % 2 === 0 ? "#f8f9fa" : "transparent")}
                 onClick={(e) => {
-                  // Prevent showing project details if clicking the toggle switch or its container
-                  if (e.target instanceof Element && (
-                    e.target.closest('.toggle-switch') || 
-                    e.target.closest('td:first-child')
-                  )) {
-                    e.stopPropagation();
-                    return;
-                  }
+                    if ((e.target as HTMLElement).closest("td")?.cellIndex === 0) return;
                   setExpandedProject(project);
                 }}
               >
                 <td style={{
-                  ...getCellStyle(true, 'select', false, index),
-                }}
-                onClick={(e) => e.stopPropagation()}
-                >
+                    ...getCellStyle(true, 'select'),
+                  }}>
                   <ToggleSwitch
                     checked={selectedProjects.has(project.id)}
-                    onChange={() => {
-                      const newSelected = new Set(selectedProjects);
-                      if (selectedProjects.has(project.id)) {
-                        newSelected.delete(project.id);
-                      } else {
-                        newSelected.add(project.id);
-                      }
-                      setSelectedProjects(newSelected);
-                    }}
+                      onChange={() => handleSelectProject(project)}
                   />
                 </td>
                 {pinnedColumns.pmoId && (
@@ -399,27 +437,40 @@ export const SavedProjects = ({
                 )}
                 {pinnedColumns.order && (
                   <td style={{
-                    ...getCellStyle(true, 'order', false, index),
+                      ...getCellStyle(true, 'order'),
                   }}>{project.order}</td>
                 )}
                 {settingsOrder.map((column) => 
                   visibleColumns[column] && !pinnedColumns[column] && (
-                    <td key={column} style={getCellStyle(false, undefined, false, index)}>
-                      {formatCellValue(column, project[column])}
+                      <td key={column} style={getCellStyle()}>
+                        {formatCellValue(column, project[column as keyof Project])}
                     </td>
                   )
                 )}
               </tr>
-            ))}
+              ))
+            ) : (
+              <tr>
+                <td colSpan={Object.keys(visibleColumns).length} style={{ 
+                  textAlign: "center", 
+                  padding: "20px" 
+                }}>
+                  {projects.length === 0 ? 
+                    "Please select an Excel file to load projects" : 
+                    "No matching results found"}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       <div style={{ 
-        marginTop: "20px",
         display: "flex",
         justifyContent: "space-between",
-        alignItems: "center"
+        alignItems: "center",
+        marginTop: "20px",
+        padding: "0 20px"
       }}>
         <button
           onClick={handleRemoveProjects}
@@ -444,7 +495,8 @@ export const SavedProjects = ({
         </button>
 
         <div style={{
-          backgroundColor: "var(--bg-secondary)",
+          backgroundColor: "var(--bg-tertiary)",
+          color: "black",
           borderRadius: "4px",
           padding: "6px 12px",
           display: "flex",

@@ -53,6 +53,7 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
       jeReadyToRoute: true,
       jeApproved: true,
       estimateAnalysis: true,
+      thirtyPercentDesignReviewMeeting: true,
       thirtyPercentDesignAvailable: true,
       sixtyPercentDesignReviewMeeting: true,
       sixtyPercentDesignAvailable: true,
@@ -143,7 +144,7 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
         marginLeft: '20px',
       }}>
         <div className="content-container card" style={{
-          maxWidth: '1200px',
+          maxWidth: '2200px',
           margin: '0 auto',
           minHeight: 'calc(100vh - var(--spacing-xl) * 2)',
         }}>
