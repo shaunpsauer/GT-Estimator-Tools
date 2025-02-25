@@ -37,7 +37,7 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
       workStream: true,
       workType: true,
       engrPlanYear: true,
-      constructionPlanYear: true,
+      constPlanYear: true,
       commitmentDate: true,
       station: true,
       line: true,
@@ -68,9 +68,7 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
     };
   });
 
-  const [projects, setProjects] = useState<Project[]>(() => {
-    return storageService.loadProjects() || [];
-  });
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const [savedProjects, setSavedProjects] = useState<Project[]>([]);
 
@@ -159,9 +157,6 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
       
       return mergedProjects;
     });
-
-    // Update storage
-    storageService.saveProjects(newProjects);
     
     // Update saved projects if they exist in the new data
     setSavedProjects(prevSaved => {

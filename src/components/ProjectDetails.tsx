@@ -76,7 +76,7 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
     {
       title: "Construction Milestones",
       fields: [
-        { key: "constructionPlanYear", label: "Construction Plan Year" },
+        { key: "constPlanYear", label: "Construction Plan Year" },
         { key: "commitmentDate", label: "Commitment Date" },
         { key: "ntp", label: "NTP" },
         { key: "mob", label: "MOB" },
@@ -155,7 +155,7 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
                     fontWeight: "normal",
                     color: "var(--text-secondary)"
                   }}>
-                    {project[field.key as keyof Project] || 'N/A'}
+                    {String(project[field.key as keyof Project] || 'N/A')}
                   </Typography>
                 </Box>
               ))}

@@ -79,7 +79,7 @@ export const SavedProjects = ({
     'workStream',
     'workType',
     'engrPlanYear',
-    'constructionPlanYear',
+    'constPlanYear',
     'commitmentDate',
     'station',
     'line',
@@ -176,7 +176,7 @@ export const SavedProjects = ({
       
       // Years & Dates
       engrPlanYear: "Eng. Year",
-      constructionPlanYear: "Const. Year",
+      constPlanYear: "Const. Year",
       commitmentDate: "Commit Date",
       
       // Milestones

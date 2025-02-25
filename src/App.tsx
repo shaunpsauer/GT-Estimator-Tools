@@ -4,7 +4,7 @@ import './styles/global.css';
 import { Project } from './types/Project';
 
 function App() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [, setProjects] = useState<Project[]>([]);
 
   const handleProjectsLoad = (newProjects: Project[]) => {
     setProjects(newProjects);

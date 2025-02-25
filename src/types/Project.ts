@@ -14,8 +14,8 @@ export interface Project {
   projectName: string;
   workStream: string;
   workType: string;
-  engrPlanYear: string;
-  constructionPlanYear: string;
+  engrPlanYear: number;
+  constPlanYear: number;
   commitmentDate: string;
   thirtyPercentDesignReviewMeeting: string;
   thirtyPercentDesignAvailable: string;
@@ -68,7 +68,7 @@ export interface VisibleColumns {
   city: boolean;
   county: boolean;
   engrPlanYear: boolean;
-  constructionPlanYear: boolean;
+  constPlanYear: boolean;
   commitmentDate: boolean;
   thirtyPercentDesignReviewMeeting: boolean;
   thirtyPercentDesignAvailable: boolean;
