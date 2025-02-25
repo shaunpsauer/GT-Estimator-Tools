@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Slide from "@mui/material/Slide";
 import { TransitionProps } from "@mui/material/transitions";
 import {
@@ -68,26 +68,12 @@ const formatLabel = (key: string) => {
   return formattedLabels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
 };
 
-const SlideTransition = (
-  props: TransitionProps & { children: React.ReactElement }
-) => {
-  return (
-    <Slide 
-      direction="left" 
-      {...props} 
-      easing={{
-        enter: "ease-in-out",
-        exit: "ease-in-out"
-      }}
-      timeout={{
-        enter: 500,
-        exit: 500,
-      }}
-      mountOnEnter
-      unmountOnExit
-    />
-  );
-};
+// Define the transition component properly
+const SlideTransition = React.forwardRef<HTMLDivElement, TransitionProps & { children: React.ReactElement }>(
+  function Transition(props, ref) {
+    return <Slide direction="left" ref={ref} {...props} />;
+  }
+);
 
 export const SettingsCard = ({
   isOpen,
@@ -162,7 +148,6 @@ export const SettingsCard = ({
     'jeReadyToRoute',
     'jeApproved',
     'estimateAnalysis',
-    'thirtyPercentDesignReviewMeeting',
     'thirtyPercentDesignAvailable',
     'sixtyPercentDesignReviewMeeting',
     'sixtyPercentDesignAvailable',
@@ -198,10 +183,6 @@ export const SettingsCard = ({
       TransitionComponent={SlideTransition}
       TransitionProps={{ 
         in: isOpen && !isExiting,
-        timeout: {
-          enter: 500,
-          exit: 500,
-        }
       }}
       PaperProps={{
         sx: {
@@ -268,7 +249,7 @@ export const SettingsCard = ({
             <Box key={key} display="flex" alignItems="center" justifyContent="space-between" paddingY={0.5}>
               <Typography variant="body1">{formatLabel(key)}</Typography>
               <ToggleSwitch
-                checked={!!settings[key as keyof VisibleColumns]}
+                checked={settings[key as keyof VisibleColumns] ?? false}
                 onChange={() => toggleSetting(key as keyof VisibleColumns)}
               />
             </Box>
@@ -313,4 +294,4 @@ export const SettingsCard = ({
       </DialogActions>
     </Dialog>
   );
-}; 
+};

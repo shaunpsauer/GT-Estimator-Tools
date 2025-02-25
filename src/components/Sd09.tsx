@@ -331,28 +331,19 @@ export const Sd09 = ({
 
       <div style={{ marginBottom: "20px" }}>
         <SearchBar 
-          onSearch={(terms, isApplied, isCleared) => {
-            if (isCleared) {
-              setSearchValue('');
+          value={searchValue}
+          onChange={(value) => {
+            setSearchValue(value);
+            // Clear applied filters when search changes
+            if (!value) {
               setAppliedFilters([]);
-              return;
             }
-            
-            if (isApplied) {
-              // Add current search to applied filters
-              if (terms.trim()) {
-                setAppliedFilters(prev => [...prev, terms.trim()]);
-                setSearchValue('');
-              }
-            } else {
-              // Update current search term
-              setSearchValue(terms);
-            }
-          }} 
+          }}
+          placeholder="Search schedule items..."
         />
       </div>
 
-      <div className="table-container" style={{
+     <div className="table-container" style={{
         flex: 1,
         width: "100%",
         overflowX: "auto",

@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Project, VisibleColumns } from "../types/Project";
 import { PlusCircle, MinusCircle } from "react-feather";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { db } from "../services/db";
 import ProjectDetails from "./ProjectDetails";
 import SearchBar from "./SearchBar";
+import DateFilterButtons from './FilterButtons';
 
 
 interface SavedProjectsProps {
@@ -23,12 +24,12 @@ export const SavedProjects = ({
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(new Set());
   const [expandedProject, setExpandedProject] = useState<Project | null>(null);
   const [searchValue, setSearchValue] = useState('');
-  const [appliedFilters, setAppliedFilters] = useState<string[]>([])
   const [pinnedColumns, setPinnedColumns] = useState<{[key: string]: boolean}>({
     pmoId: false,
     order: false,
   });
   const [, setExistingProjectIds] = useState<Set<number>>(new Set());
+  const [dateFilteredProjects, setDateFilteredProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     loadExistingProjects();
@@ -206,27 +207,25 @@ export const SavedProjects = ({
     return formattedLabels[column] || column.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
   };
 
-  const filteredProjects = projects
-    .filter((project) => {
-      // First apply any active search term
-      if (searchValue) {
-        const searchMatch = Object.entries(project)
+  const filteredProjects = useMemo(() => {
+    let filtered = projects;
+    
+    if (dateFilteredProjects.length > 0) {
+      filtered = dateFilteredProjects;
+    }
+    
+    if (searchValue) {
+      filtered = filtered.filter(project => {
+        return Object.entries(project)
           .filter(([key]) => visibleColumns[key as keyof VisibleColumns])
           .some(([_, value]) => 
             String(value).toLowerCase().includes(searchValue.toLowerCase())
           );
-        if (!searchMatch) return false;
-      }
-
-      // Then apply any fixed filters
-      return appliedFilters.every(filter => {
-        return Object.entries(project)
-          .filter(([key]) => visibleColumns[key as keyof VisibleColumns])
-          .some(([_, value]) => 
-            String(value).toLowerCase().includes(filter.toLowerCase())
-          );
       });
-    });
+    }
+    
+    return filtered;
+  }, [projects, searchValue, dateFilteredProjects, visibleColumns]);
 
   const handleSelectAll = () => {
     if (selectedProjects.size === filteredProjects.length) {
@@ -282,6 +281,14 @@ export const SavedProjects = ({
     } : {}),
     whiteSpace: "nowrap" as const,
   });
+
+  const handleDateFilter = (filtered: Project[]) => {
+    setDateFilteredProjects(filtered);
+  };
+
+  const handleClearDateFilter = () => {
+    setDateFilteredProjects([]);
+  };
 
   return (
     <div style={{
@@ -351,41 +358,16 @@ export const SavedProjects = ({
         </button>
       </div>
 
-      <div style={{ marginBottom: "20px" }}>
-        <SearchBar 
-          onSearch={(terms, isApplied, isCleared) => {
-            if (isCleared) {
-              setSearchValue('');
-              setAppliedFilters([]);
-              return;
-            }
-            
-            if (isApplied) {
-              // Add current search to applied filters
-              if (terms.trim()) {
-                setAppliedFilters(prev => [...prev, terms.trim()]);
-                setSearchValue('');
-              }
-            } else {
-              // Update current search term
-              setSearchValue(terms);
-            }
-          }} 
-        />
+      <div className="responsive-container" style={{ marginBottom: '20px', gap: 'var(--spacing-md)' }}>
+        <SearchBar value={searchValue} onChange={setSearchValue} placeholder="Search projects..." />
+        <DateFilterButtons projects={projects} onApplyFilter={handleDateFilter} onClearFilter={handleClearDateFilter} />
       </div>
 
       <div className="table-container" style={{
-        flex: 1,
-        width: "100%",
-        overflowX: "auto",
-        overflowY: "auto",
-        maxHeight: "calc(80vh - 250px)",
-        position: "relative",
-        zIndex: 0,
-        marginTop: "20px",
-        border: "1px solid var(--border-light)",
-        borderRadius: "var(--border-radius-sm)",
-        minWidth: 0,
+        width: '100%',
+        overflowX: 'auto',
+        overflowY: 'auto',
+        maxHeight: 'calc(100vh - 300px)'
       }}>
         <table style={{
           width: "100%",
