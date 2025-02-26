@@ -43,7 +43,7 @@ export interface Project {
   last_updated?: string;
   is_changed?: boolean;
   _changes?: ProjectChanges;
-  dateCategory?: 'thisWeek' | 'thisMonth' | 'nextMonth' | 'next3Months' | 'future' | 'none';
+  dateCategory?: DateCategory;
   [key: string]: string | number | boolean | undefined | ProjectChanges | undefined;
 }
 
@@ -93,4 +93,12 @@ export interface VisibleColumns {
   tieIn: boolean;
   enro: boolean;
   unitCapture: boolean;
-} 
+}
+
+export type DateCategory = 
+  | "thisWeek" 
+  | "nextWeek"
+  | "thisMonth" 
+  | "next3Months" 
+  | "future" 
+  | "none"; 

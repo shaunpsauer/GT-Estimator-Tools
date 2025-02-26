@@ -43,7 +43,14 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
       // If both have values, compare dates
       const dateA = new Date(aValue as string);
       const dateB = new Date(bValue as string);
-      return dateA.getTime() - dateB.getTime();
+      const today = new Date();
+      
+      // Calculate absolute difference in days from today
+      const diffA = Math.abs(dateA.getTime() - today.getTime());
+      const diffB = Math.abs(dateB.getTime() - today.getTime());
+      
+      // Sort by closest date to today
+      return diffA - diffB;
     });
 
     // Add a category field to each project for highlighting
@@ -66,11 +73,12 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
       const endOfWeek = new Date(today);
       endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
       
+      // Calculate the end of next week
+      const endOfNextWeek = new Date(endOfWeek);
+      endOfNextWeek.setDate(endOfWeek.getDate() + 7);
+      
       // Calculate the end of current month
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      
-      // Calculate the end of next month
-      const endOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
       
       // Calculate the end of next 3 months
       const endOfNext3Months = new Date(today.getFullYear(), today.getMonth() + 3, 0);
@@ -78,10 +86,10 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
       // Determine category based on date range
       if (projectDate <= endOfWeek) {
         projectCopy.dateCategory = 'thisWeek'; // Red
+      } else if (projectDate <= endOfNextWeek) {
+        projectCopy.dateCategory = 'nextWeek'; // Yellow
       } else if (projectDate <= endOfMonth) {
-        projectCopy.dateCategory = 'thisMonth'; // Yellow
-      } else if (projectDate <= endOfNextMonth) {
-        projectCopy.dateCategory = 'nextMonth'; // Light Green
+        projectCopy.dateCategory = 'thisMonth'; // Light Green
       } else if (projectDate <= endOfNext3Months) {
         projectCopy.dateCategory = 'next3Months'; // Dark Green
       } else {
@@ -145,10 +153,10 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
           <div style={{ 
             width: '12px', 
             height: '12px', 
-            backgroundColor: '#ffcdd2', 
+            backgroundColor: '#ffcdd2', // Red for current week
             borderRadius: '2px' 
           }}></div>
-          <span>This Week</span>
+          <span>Current Week</span>
         </div>
         
         <div style={{ 
@@ -159,7 +167,21 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
           <div style={{ 
             width: '12px', 
             height: '12px', 
-            backgroundColor: '#fff9c4', 
+            backgroundColor: '#fff9c4', // Yellow for next week
+            borderRadius: '2px' 
+          }}></div>
+          <span>Next Week</span>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '5px' 
+        }}>
+          <div style={{ 
+            width: '12px', 
+            height: '12px', 
+            backgroundColor: '#c8e6c9', // Light green for current month
             borderRadius: '2px' 
           }}></div>
           <span>This Month</span>
@@ -173,21 +195,7 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
           <div style={{ 
             width: '12px', 
             height: '12px', 
-            backgroundColor: '#c8e6c9', 
-            borderRadius: '2px' 
-          }}></div>
-          <span>Next Month</span>
-        </div>
-        
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '5px' 
-        }}>
-          <div style={{ 
-            width: '12px', 
-            height: '12px', 
-            backgroundColor: '#81c784', 
+            backgroundColor: '#81c784', // Dark green for next 3 months
             borderRadius: '2px' 
           }}></div>
           <span>Next 3 Months</span>

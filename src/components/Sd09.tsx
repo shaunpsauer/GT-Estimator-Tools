@@ -386,6 +386,21 @@ export const Sd09 = ({
     unitCapture: "Unit Cap.",
   };
 
+  const getRowStyle = (category: string) => {
+    switch (category) {
+      case 'thisWeek':
+        return { backgroundColor: '#ffcdd2' };
+      case 'thisMonth':
+        return { backgroundColor: '#fff9c4' };
+      case 'nextMonth':
+        return { backgroundColor: '#c8e6c9' };
+      case 'next3Months':
+        return { backgroundColor: '#81c784' };
+      default:
+        return {};
+    }
+  };
+
   return (
     <div
       style={{
@@ -562,17 +577,18 @@ export const Sd09 = ({
                   key={project.id}
                   style={{
                     cursor: "pointer",
-                    backgroundColor:
-                      project.id % 2 === 0 ? "#f8f9fa" : "transparent",
+                    backgroundColor: project.dateCategory ? 
+                      getRowStyle(project.dateCategory as string).backgroundColor : 
+                      index % 2 === 0 ? "#f8f9fa" : "white",
                     transition: "background-color 0.2s",
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#f5f5f5")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      project.id % 2 === 0 ? "#f8f9fa" : "transparent")
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
+                  onMouseLeave={(e) => {
+                    const bgColor = project.dateCategory ? 
+                      getRowStyle(project.dateCategory as string).backgroundColor || 'white' : 
+                      index % 2 === 0 ? "#f8f9fa" : "white";
+                    e.currentTarget.style.backgroundColor = bgColor;
+                  }}
                   onClick={(e) => {
                     if (
                       (e.target as HTMLElement).closest("td")?.cellIndex === 0

@@ -360,13 +360,13 @@ export const SavedProjects = ({
   const getRowStyle = (category: string) => {
     switch (category) {
       case 'thisWeek':
-        return { backgroundColor: '#ffcdd2' };
+        return { backgroundColor: '#ffcdd2' }; // Red
+      case 'nextWeek':
+        return { backgroundColor: '#fff9c4' }; // Yellow
       case 'thisMonth':
-        return { backgroundColor: '#fff9c4' };
-      case 'nextMonth':
-        return { backgroundColor: '#c8e6c9' };
+        return { backgroundColor: '#c8e6c9' }; // Light green
       case 'next3Months':
-        return { backgroundColor: '#81c784' };
+        return { backgroundColor: '#81c784' }; // Dark green
       default:
         return {};
     }
