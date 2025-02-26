@@ -235,6 +235,15 @@ export const SavedProjects = ({
     );
   };
 
+  const parseSearchTerm = (searchTerm: string) => {
+    const match = searchTerm.match(/^([^:]+):(.+)$/);
+    if (match) {
+      const [_, column, value] = match;
+      return { column: column.trim(), value: value.trim() };
+    }
+    return null;
+  };
+
   const filteredProjects = useMemo(() => {
     let filtered = projects;
 
@@ -244,13 +253,34 @@ export const SavedProjects = ({
 
     // Apply all filters sequentially
     return filtered.filter((project) => {
-      return appliedFilters.every((filter) =>
-        Object.entries(project)
+      return appliedFilters.every((filter) => {
+        const parsedFilter = parseSearchTerm(filter);
+        
+        if (parsedFilter) {
+          // Handle column-specific search
+          const { column, value } = parsedFilter;
+          
+          // Find the matching column key from the visible columns
+          const columnKey = Object.keys(visibleColumns).find(key => 
+            formatColumnName(key).toLowerCase() === column.toLowerCase()
+          );
+
+          if (columnKey && visibleColumns[columnKey as keyof VisibleColumns]) {
+            return String(project[columnKey as keyof Project])
+              .toLowerCase()
+              .includes(value.toLowerCase());
+          }
+          // If column not found, treat as normal search
+          return false;
+        }
+
+        // Normal search across all columns
+        return Object.entries(project)
           .filter(([key]) => visibleColumns[key as keyof VisibleColumns])
           .some(([_, value]) =>
             String(value).toLowerCase().includes(filter.toLowerCase())
-          )
-      );
+          );
+      });
     });
   }, [projects, appliedFilters, dateFilteredProjects, visibleColumns]);
 
