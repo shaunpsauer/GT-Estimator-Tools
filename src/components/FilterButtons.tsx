@@ -7,17 +7,26 @@ interface FilterButtonsProps {
 }
 
 export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButtonsProps) => {
-  const [selectedDateColumn, setSelectedDateColumn] = useState<string>('mob');
+  // Initialize state from localStorage or default to 'jeReadyToRoute'
+  const [selectedDateColumn, setSelectedDateColumn] = useState<string>(
+    () => localStorage.getItem('selectedDateColumn') || 'jeReadyToRoute'
+  );
+
+  // Update localStorage when selection changes
+  const handleDateColumnChange = (value: string) => {
+    setSelectedDateColumn(value);
+    localStorage.setItem('selectedDateColumn', value);
+  };
 
   // Date options for the dropdown
   const dateColumns = [
-    { value: 'mob', label: 'MOB' },
     { value: 'jeReadyToRoute', label: 'JE Ready to Route' },
     { value: 'jeApproved', label: 'JE Approved' },
     { value: 'class2', label: 'Class 2' },
     { value: 'class3', label: 'Class 3' },
     { value: 'class5', label: 'Class 5' },
     { value: 'negotiatePrice', label: 'Negotiate Price' },
+    { value: 'mob', label: 'MOB' },
   ];
 
   useEffect(() => {
@@ -119,7 +128,7 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
         <select
           id="dateColumnSelector"
           value={selectedDateColumn}
-          onChange={(e) => setSelectedDateColumn(e.target.value)}
+          onChange={(e) => handleDateColumnChange(e.target.value)}
           style={{
             padding: '8px 12px',
             borderRadius: 'var(--border-radius-sm)',
