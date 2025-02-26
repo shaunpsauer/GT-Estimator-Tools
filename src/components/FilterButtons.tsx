@@ -95,22 +95,6 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
     onSortedProjectsChange(categorizedProjects);
   };
 
-  // Add getRowStyle function
-  const getRowStyle = (category: string) => {
-    switch (category) {
-      case 'thisWeek':
-        return { backgroundColor: '#ffcdd2' };
-      case 'thisMonth':
-        return { backgroundColor: '#fff9c4' };
-      case 'nextMonth':
-        return { backgroundColor: '#c8e6c9' };
-      case 'next3Months':
-        return { backgroundColor: '#81c784' };
-      default:
-        return {};
-    }
-  };
-
   return (
     <div style={{ marginBottom: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

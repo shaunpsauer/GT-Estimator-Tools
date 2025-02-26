@@ -298,6 +298,61 @@ export const Sd09 = ({
     setSearchValue("");
   };
 
+  const formattedLabels = {
+    // Team Members
+    costEstimator: "Cost Est.",
+    costEstimatorRequest: "Cost Est. Req.",
+    projectManager: "PM",
+    projectEngineer: "Proj. Eng.",
+    designEstimator: "Design Est.",
+    constructionContractor: "Contractor",
+    ade: "ADE",
+
+    // Project Info
+    pmoId: "PMO ID",
+    order: "Order",
+    multipleOrder: "Multi Order",
+    bundleId: "Bundle ID",
+    postEstimate: "Post Est.",
+    mat: "MAT",
+    projectName: "Project",
+    workStream: "Work Stream",
+    workType: "Work Type",
+    station: "Station",
+    line: "LINE",
+    city: "City",
+    county: "County",
+
+    // Years & Dates
+    engrPlanYear: "Eng. Year",
+    constPlanYear: "Const. Year",
+    commitmentDate: "Commit Date",
+
+    // Milestones
+    thirtyPercentDesignReviewMeeting: "30% Review",
+    thirtyPercentDesignAvailable: "30% Design",
+    sixtyPercentDesignReviewMeeting: "60% Review",
+    sixtyPercentDesignAvailable: "60% Design",
+    ninetyPercentDesignReviewMeeting: "90% Review",
+    ninetyPercentDesignAvailable: "90% Design",
+    ifc: "IFC",
+    class5: "CLASS 5",
+    class4: "CLASS 4",
+    class3: "CLASS 3",
+    class2: "CLASS 2",
+    negotiatePrice: "Neg. Price",
+    jeReadyToRoute: "JE Ready",
+    jeApproved: "JE Appr.",
+    estimateAnalysis: "Est. Analysis",
+    ntp: "NTP",
+    mob: "MOB",
+    mp1: "MP1",
+    mp2: "MP2",
+    tieIn: "Tie-in",
+    enro: "ENRO",
+    unitCapture: "Unit Cap.",
+  };
+
   return (
     <div
       style={{
@@ -402,6 +457,7 @@ export const Sd09 = ({
           onClearAllFilters={handleClearAllFilters}
           appliedFilters={appliedFilters}
           placeholder="Search schedule items..."
+          columnNames={formattedLabels}
         />
       </div>
 

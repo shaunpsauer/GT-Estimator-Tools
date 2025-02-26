@@ -8,6 +8,7 @@ interface SearchBarProps {
   onClearAllFilters: () => void;
   appliedFilters: string[];
   placeholder?: string;
+  columnNames?: { [key: string]: string };
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -17,7 +18,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
   onRemoveFilter,
   onClearAllFilters,
   appliedFilters,
-  placeholder
+  placeholder,
+  columnNames = {}
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -33,6 +35,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
       onChange("");
     }
   };
+
+  const tooltipExamples = [
+    { column: "PMO ID", value: "12345" },
+    { column: "Cost Est.", value: "John Smith" },
+    { column: "Line", value: "300A" },
+    { column: "PM", value: "Jane Doe" },
+  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
@@ -97,10 +106,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
               <li>Use "Column: Value" to search specific columns</li>
               <li>Examples:</li>
               <ul style={{ padding: "0 0 0 16px" }}>
-                <li>Cost Est.: John Smith</li>
-                <li>Line: 300A</li>
-                <li>PM: Jane Doe</li>
+                {tooltipExamples.map((example, index) => (
+                  <li key={index}>{`${example.column}: ${example.value}`}</li>
+                ))}
               </ul>
+              <li style={{ marginTop: "8px", color: "var(--text-secondary)" }}>
+                Available columns: {Object.values(columnNames).join(", ")}
+              </li>
             </ul>
           </div>
         </div>

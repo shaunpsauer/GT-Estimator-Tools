@@ -251,7 +251,6 @@ export const SavedProjects = ({
       filtered = dateFilteredProjects;
     }
 
-    // Apply all filters sequentially
     return filtered.filter((project) => {
       return appliedFilters.every((filter) => {
         const parsedFilter = parseSearchTerm(filter);
@@ -261,16 +260,20 @@ export const SavedProjects = ({
           const { column, value } = parsedFilter;
           
           // Find the matching column key from the visible columns
-          const columnKey = Object.keys(visibleColumns).find(key => 
-            formatColumnName(key).toLowerCase() === column.toLowerCase()
-          );
+          const columnKey = Object.keys(visibleColumns).find(key => {
+            const formattedName = formatColumnName(key);
+            // Case-insensitive comparison
+            return formattedName.toLowerCase() === column.toLowerCase();
+          });
 
           if (columnKey && visibleColumns[columnKey as keyof VisibleColumns]) {
-            return String(project[columnKey as keyof Project])
-              .toLowerCase()
-              .includes(value.toLowerCase());
+            const projectValue = project[columnKey as keyof Project];
+            return projectValue !== undefined && 
+                   String(projectValue).toLowerCase().includes(value.toLowerCase());
           }
-          // If column not found, treat as normal search
+          
+          // If column not found, return false to filter out this item
+          console.log(`Column not found: ${column}`);
           return false;
         }
 
@@ -382,6 +385,53 @@ export const SavedProjects = ({
     setSearchValue("");
   };
 
+  const formattedLabels = {
+    "PMO ID": "PMO ID",
+    "Order": "Order",
+    "Cost Est.": "Cost Est.",
+    "Cost Est. Req.": "Cost Est. Req.",
+    "ADE": "ADE",
+    "PM": "PM",
+    "Proj. Eng.": "Proj. Eng.",
+    "Design Est.": "Design Est.",
+    "Contractor": "Contractor",
+    "Bundle ID": "Bundle ID",
+    "Post Est.": "Post Est.",
+    "MAT": "MAT",
+    "Project": "Project",
+    "Stream": "Stream",
+    "Type": "Type",
+    "Station": "Station",
+    "LINE": "LINE",
+    "City": "City",
+    "County": "County",
+    "Eng. Year": "Eng. Year",
+    "Const. Year": "Const. Year",
+    "Commit Date": "Commit Date",
+    "30% Review": "30% Review",
+    "30% Design": "30% Design",
+    "60% Review": "60% Review",
+    "60% Design": "60% Design",
+    "90% Review": "90% Review",
+    "90% Design": "90% Design",
+    "IFC": "IFC",
+    "CLASS 5": "CLASS 5",
+    "CLASS 4": "CLASS 4",
+    "CLASS 3": "CLASS 3",
+    "CLASS 2": "CLASS 2",
+    "Neg. Price": "Neg. Price",
+    "JE Ready": "JE Ready",
+    "JE Appr.": "JE Appr.",
+    "Est. Analysis": "Est. Analysis",
+    "NTP": "NTP",
+    "MOB": "MOB",
+    "MP1": "MP1",
+    "MP2": "MP2",
+    "Tie-in": "Tie-in",
+    "ENRO": "ENRO",
+    "Unit Cap.": "Unit Cap."
+  };
+
   return (
     <div
       style={{
@@ -482,6 +532,7 @@ export const SavedProjects = ({
           onClearAllFilters={handleClearAllFilters}
           appliedFilters={appliedFilters}
           placeholder="Search projects..."
+          columnNames={formattedLabels}
         />
         <DateFilterButtons
           projects={projects}
@@ -554,13 +605,7 @@ export const SavedProjects = ({
                   key={project.id}
                   style={{
                     cursor: "pointer",
-                    backgroundColor: (() => {
-                      if (project.dateCategory && typeof project.dateCategory === 'string') {
-                        return getRowStyle(project.dateCategory).backgroundColor;
-                      }
-                      return index % 2 === 0 ? "#f8f9fa" : "white";
-                    })(),
-                    transition: "background-color 0.2s",
+                    ...getRowStyle(project.dateCategory as string)
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
                   onMouseLeave={(e) => {
