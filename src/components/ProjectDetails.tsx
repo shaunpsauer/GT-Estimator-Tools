@@ -1,6 +1,7 @@
-import { Dialog, DialogContent, Typography, Button, Box, Divider } from "@mui/material";
+import { Dialog, DialogContent, Typography, Button, Box, Divider, TextField } from "@mui/material";
 import { X } from "react-feather";
 import { Project } from "../types/Project";
+import { useState, useEffect } from "react";
 
 interface ProjectDetailsProps {
   project: Project;
@@ -8,6 +9,24 @@ interface ProjectDetailsProps {
 }
 
 const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState('');
+
+  // Load notes from localStorage when component mounts
+  useEffect(() => {
+    const savedNotes = localStorage.getItem(`project-notes-${project.pmoId}-${project.order}`);
+    if (savedNotes) {
+      setNotes(savedNotes);
+    }
+  }, [project.pmoId, project.order]);
+
+  // Save notes to localStorage whenever they change
+  const handleNotesChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newNotes = event.target.value;
+    setNotes(newNotes);
+    localStorage.setItem(`project-notes-${project.pmoId}-${project.order}`, newNotes);
+  };
+
   const sections = [
     {
       title: "Project Information",
@@ -88,104 +107,161 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
   ];
 
   return (
-    <Dialog
-      open={true}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: "var(--border-radius-md)",
-          overflow: "hidden",
-          boxShadow: "0 5px 35px var(--shadow-color)"
-        }
-      }}
-    >
-      <Box sx={{
-        backgroundColor: "var(--primary-color)",
-        color: "white",
-        padding: "var(--spacing-md) var(--spacing-lg)",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-      }}>
-        <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-          Project Details
-        </Typography>
-        <Button
-          onClick={onClose}
-          sx={{
-            minWidth: 'auto',
-            padding: 1,
-            color: 'white',
-            '&:hover': { backgroundColor: 'var(--primary-dark)' }
-          }}
-        >
-          <X size={24} />
-        </Button>
-      </Box>
-
-      <DialogContent sx={{ padding: "var(--spacing-lg)" }}>
-        {sections.map((section, index) => (
-          <Box key={section.title} sx={{ mb: index < sections.length - 1 ? 3 : 0 }}>
-            <Typography variant="h6" sx={{ 
-              color: "var(--primary-color)",
-              fontWeight: "bold",
-              mb: 1
-            }}>
-              {section.title}
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Box sx={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: 2
-            }}>
-              {section.fields.map(field => (
-                <Box key={field.key} sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography sx={{ 
-                    color: "var(--text-primary)",
-                    fontWeight: "bold",
-                    fontSize: "1rem",
-                    mb: 0.5
-                  }}>
-                    {field.label}
-                  </Typography>
-                  <Typography sx={{
-                    fontWeight: "normal",
-                    color: "var(--text-secondary)"
-                  }}>
-                    {String(project[field.key as keyof Project] || 'N/A')}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
+    <>
+      <Dialog
+        open={true}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "var(--border-radius-md)",
+            overflow: "hidden",
+            boxShadow: "0 5px 35px var(--shadow-color)"
+          }
+        }}
+      >
+        <Box sx={{
+          backgroundColor: "var(--primary-color)",
+          color: "white",
+          padding: "var(--spacing-md) var(--spacing-lg)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+            Project Details for {project.pmoId} - {project.order}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              onClick={() => setShowNotes(true)}
+              sx={{
+                minWidth: 'auto',
+                padding: '8px 16px',
+                color: 'white',
+                '&:hover': { backgroundColor: 'var(--primary-dark)' }
+              }}
+            >
+              Notes
+            </Button>
+            <Button
+              onClick={onClose}
+              sx={{
+                minWidth: 'auto',
+                padding: 1,
+                color: 'white',
+                '&:hover': { backgroundColor: 'var(--primary-dark)' }
+              }}
+            >
+              <X size={24} />
+            </Button>
           </Box>
-        ))}
-      </DialogContent>
+        </Box>
 
-      <Box sx={{
-        borderTop: "1px solid var(--border-light)",
-        padding: "var(--spacing-md)",
-        display: "flex",
-        justifyContent: "center",
-        backgroundColor: "var(--bg-secondary)"
-      }}>
-        <Button
-          onClick={onClose}
-          variant="contained"
-          sx={{
-            backgroundColor: "var(--primary-color)",
-            color: "white",
-            '&:hover': {
-              backgroundColor: "var(--primary-dark)"
-            }
-          }}
-        >
-          Close
-        </Button>
-      </Box>
-    </Dialog>
+        <DialogContent sx={{ padding: "var(--spacing-lg)" }}>
+          {sections.map((section, index) => (
+            <Box key={section.title} sx={{ mb: index < sections.length - 1 ? 3 : 0 }}>
+              <Typography variant="h6" sx={{ 
+                color: "var(--primary-color)",
+                fontWeight: "bold",
+                mb: 1
+              }}>
+                {section.title}
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Box sx={{ 
+                display: "grid", 
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: 2
+              }}>
+                {section.fields.map(field => (
+                  <Box key={field.key} sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography sx={{ 
+                      color: "var(--text-primary)",
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      mb: 0.5
+                    }}>
+                      {field.label}
+                    </Typography>
+                    <Typography sx={{
+                      fontWeight: "normal",
+                      color: "var(--text-secondary)"
+                    }}>
+                      {String(project[field.key as keyof Project] || 'N/A')}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          ))}
+        </DialogContent>
+
+        <Box sx={{
+          borderTop: "1px solid var(--border-light)",
+          padding: "var(--spacing-md)",
+          display: "flex",
+          justifyContent: "center",
+          backgroundColor: "var(--bg-secondary)"
+        }}>
+          <Button
+            onClick={onClose}
+            variant="contained"
+            sx={{
+              backgroundColor: "var(--primary-color)",
+              color: "white",
+              '&:hover': {
+                backgroundColor: "var(--primary-dark)"
+              }
+            }}
+          >
+            Close
+          </Button>
+        </Box>
+      </Dialog>
+
+      <Dialog
+        open={showNotes}
+        onClose={() => setShowNotes(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <Box sx={{
+          backgroundColor: "var(--primary-color)",
+          color: "white",
+          padding: "var(--spacing-md) var(--spacing-lg)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+            Notes for {project.pmoId} - {project.order}
+          </Typography>
+          <Button
+            onClick={() => setShowNotes(false)}
+            sx={{
+              minWidth: 'auto',
+              padding: 1,
+              color: 'white',
+              '&:hover': { backgroundColor: 'var(--primary-dark)' }
+            }}
+          >
+            <X size={24} />
+          </Button>
+        </Box>
+        <DialogContent sx={{ padding: "var(--spacing-lg)" }}>
+          <TextField
+            multiline
+            rows={10}
+            fullWidth
+            value={notes}
+            onChange={handleNotesChange}
+            placeholder="Enter your notes here..."
+            variant="outlined"
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
