@@ -43,6 +43,7 @@ export interface Project {
   last_updated?: string;
   is_changed?: boolean;
   _changes?: ProjectChanges;
+  dateCategory?: 'thisWeek' | 'thisMonth' | 'nextMonth' | 'next3Months' | 'future' | 'none';
   [key: string]: string | number | boolean | undefined | ProjectChanges | undefined;
 }
 

@@ -324,8 +324,19 @@ export const SavedProjects = ({
     setDateFilteredProjects(filtered);
   };
 
-  const handleClearDateFilter = () => {
-    setDateFilteredProjects([]);
+  const getRowStyle = (category: string) => {
+    switch (category) {
+      case 'thisWeek':
+        return { backgroundColor: '#ffcdd2' };
+      case 'thisMonth':
+        return { backgroundColor: '#fff9c4' };
+      case 'nextMonth':
+        return { backgroundColor: '#c8e6c9' };
+      case 'next3Months':
+        return { backgroundColor: '#81c784' };
+      default:
+        return {};
+    }
   };
 
   return (
@@ -496,16 +507,21 @@ export const SavedProjects = ({
                   key={project.id}
                   style={{
                     cursor: "pointer",
-                    backgroundColor: index % 2 === 0 ? "#f8f9fa" : "white",
+                    backgroundColor: (() => {
+                      if (project.dateCategory && typeof project.dateCategory === 'string') {
+                        return getRowStyle(project.dateCategory).backgroundColor;
+                      }
+                      return index % 2 === 0 ? "#f8f9fa" : "white";
+                    })(),
                     transition: "background-color 0.2s",
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#f5f5f5")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      index % 2 === 0 ? "#f8f9fa" : "white")
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
+                  onMouseLeave={(e) => {
+                    const bgColor = project.dateCategory && typeof project.dateCategory === 'string'
+                      ? getRowStyle(project.dateCategory).backgroundColor
+                      : index % 2 === 0 ? "#f8f9fa" : "white";
+                    e.currentTarget.style.backgroundColor = bgColor || "#ffffff";
+                  }}
                   onClick={(e) => {
                     if (
                       (e.target as HTMLElement).closest("td")?.cellIndex === 0

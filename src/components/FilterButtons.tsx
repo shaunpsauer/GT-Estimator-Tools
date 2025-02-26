@@ -32,10 +32,17 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
 
     // Sort projects based on the selected date column
     sortedProjects.sort((a, b) => {
-      const dateA = typeof a[dateColumn] === 'string' ? new Date(a[dateColumn] as string) : new Date(9999, 11, 31);
-      const dateB = typeof b[dateColumn] === 'string' ? new Date(b[dateColumn] as string) : new Date(9999, 11, 31);
+      const aValue = a[dateColumn];
+      const bValue = b[dateColumn];
       
-      // Sort by date (ascending)
+      // If one value is empty and the other isn't, put the empty one last
+      if (!aValue && bValue) return 1;
+      if (aValue && !bValue) return -1;
+      if (!aValue && !bValue) return 0;
+      
+      // If both have values, compare dates
+      const dateA = new Date(aValue as string);
+      const dateB = new Date(bValue as string);
       return dateA.getTime() - dateB.getTime();
     });
 
@@ -86,6 +93,22 @@ export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButton
 
     // Pass the sorted and categorized projects back to the parent component
     onSortedProjectsChange(categorizedProjects);
+  };
+
+  // Add getRowStyle function
+  const getRowStyle = (category: string) => {
+    switch (category) {
+      case 'thisWeek':
+        return { backgroundColor: '#ffcdd2' };
+      case 'thisMonth':
+        return { backgroundColor: '#fff9c4' };
+      case 'nextMonth':
+        return { backgroundColor: '#c8e6c9' };
+      case 'next3Months':
+        return { backgroundColor: '#81c784' };
+      default:
+        return {};
+    }
   };
 
   return (
