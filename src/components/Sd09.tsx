@@ -190,24 +190,14 @@ export const Sd09 = ({
   };
 
   const filteredProjects = projects.filter((project) => {
-    // First apply any active search term
-    if (searchValue) {
-      const searchMatch = Object.entries(project)
-        .filter(([key]) => visibleColumns[key as keyof VisibleColumns])
-        .some(([_, value]) =>
-          String(value).toLowerCase().includes(searchValue.toLowerCase())
-        );
-      if (!searchMatch) return false;
-    }
-
-    // Then apply any fixed filters
-    return appliedFilters.every((filter) => {
-      return Object.entries(project)
+    // Apply all filters sequentially
+    return appliedFilters.every((filter) =>
+      Object.entries(project)
         .filter(([key]) => visibleColumns[key as keyof VisibleColumns])
         .some(([_, value]) =>
           String(value).toLowerCase().includes(filter.toLowerCase())
-        );
-    });
+        )
+    );
   });
 
   const handleSelectAll = () => {
@@ -294,6 +284,19 @@ export const Sd09 = ({
       : {}),
     whiteSpace: "nowrap" as const,
   });
+
+  const handleApplyFilter = (filter: string) => {
+    setAppliedFilters([...appliedFilters, filter]);
+  };
+
+  const handleRemoveFilter = (indexToRemove: number) => {
+    setAppliedFilters(appliedFilters.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleClearAllFilters = () => {
+    setAppliedFilters([]);
+    setSearchValue("");
+  };
 
   return (
     <div
@@ -393,13 +396,11 @@ export const Sd09 = ({
       <div style={{ marginBottom: "20px" }}>
         <SearchBar
           value={searchValue}
-          onChange={(value) => {
-            setSearchValue(value);
-            // Clear applied filters when search changes
-            if (!value) {
-              setAppliedFilters([]);
-            }
-          }}
+          onChange={setSearchValue}
+          onApplyFilter={handleApplyFilter}
+          onRemoveFilter={handleRemoveFilter}
+          onClearAllFilters={handleClearAllFilters}
+          appliedFilters={appliedFilters}
           placeholder="Search schedule items..."
         />
       </div>

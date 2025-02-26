@@ -35,6 +35,7 @@ export const SavedProjects = ({
   const [dateFilteredProjects, setDateFilteredProjects] = useState<Project[]>(
     []
   );
+  const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
 
   useEffect(() => {
     loadExistingProjects();
@@ -241,18 +242,17 @@ export const SavedProjects = ({
       filtered = dateFilteredProjects;
     }
 
-    if (searchValue) {
-      filtered = filtered.filter((project) => {
-        return Object.entries(project)
+    // Apply all filters sequentially
+    return filtered.filter((project) => {
+      return appliedFilters.every((filter) =>
+        Object.entries(project)
           .filter(([key]) => visibleColumns[key as keyof VisibleColumns])
           .some(([_, value]) =>
-            String(value).toLowerCase().includes(searchValue.toLowerCase())
-          );
-      });
-    }
-
-    return filtered;
-  }, [projects, searchValue, dateFilteredProjects, visibleColumns]);
+            String(value).toLowerCase().includes(filter.toLowerCase())
+          )
+      );
+    });
+  }, [projects, appliedFilters, dateFilteredProjects, visibleColumns]);
 
   const handleSelectAll = () => {
     if (selectedProjects.size === filteredProjects.length) {
@@ -337,6 +337,19 @@ export const SavedProjects = ({
       default:
         return {};
     }
+  };
+
+  const handleApplyFilter = (filter: string) => {
+    setAppliedFilters([...appliedFilters, filter]);
+  };
+
+  const handleRemoveFilter = (indexToRemove: number) => {
+    setAppliedFilters(appliedFilters.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleClearAllFilters = () => {
+    setAppliedFilters([]);
+    setSearchValue("");
   };
 
   return (
@@ -434,6 +447,10 @@ export const SavedProjects = ({
         <SearchBar
           value={searchValue}
           onChange={setSearchValue}
+          onApplyFilter={handleApplyFilter}
+          onRemoveFilter={handleRemoveFilter}
+          onClearAllFilters={handleClearAllFilters}
+          appliedFilters={appliedFilters}
           placeholder="Search projects..."
         />
         <DateFilterButtons

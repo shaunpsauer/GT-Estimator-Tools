@@ -3,39 +3,33 @@ import { useState } from "react";
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  onApplyFilter: (filter: string) => void;
+  onRemoveFilter: (indexToRemove: number) => void;
+  onClearAllFilters: () => void;
+  appliedFilters: string[];
   placeholder?: string;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placeholder }) => {
+const SearchBar: React.FC<SearchBarProps> = ({
+  value,
+  onChange,
+  onApplyFilter,
+  onRemoveFilter,
+  onClearAllFilters,
+  appliedFilters,
+  placeholder
+}) => {
   const [isFocused, setIsFocused] = useState(false);
-  const [currentSearch, setCurrentSearch] = useState("");
-  const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearch = e.target.value;
-    setCurrentSearch(newSearch);
-    onChange(newSearch);
+    onChange(e.target.value);
   };
 
   const applyCurrentFilter = () => {
-    if (currentSearch.trim()) {
-      const newFilters = [...appliedFilters, currentSearch.trim()];
-      setAppliedFilters(newFilters);
-      onChange(currentSearch.trim());
-      setCurrentSearch("");
+    if (value.trim()) {
+      onApplyFilter(value.trim());
+      onChange(""); // Clear the input after applying
     }
-  };
-
-  const removeFilter = (indexToRemove: number) => {
-    const newFilters = appliedFilters.filter((_, index) => index !== indexToRemove);
-    setAppliedFilters(newFilters);
-    onChange(currentSearch);
-  };
-
-  const clearAllFilters = () => {
-    setAppliedFilters([]);
-    setCurrentSearch("");
-    onChange("");
   };
 
   return (
@@ -64,25 +58,25 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placeholder }) =
         />
         <button
           onClick={applyCurrentFilter}
-          disabled={!currentSearch.trim()}
+          disabled={!value.trim()}
           className="button button-primary"
           style={{
             padding: "8px 16px",
             fontSize: "14px",
-            cursor: currentSearch.trim() ? "pointer" : "not-allowed",
-            opacity: currentSearch.trim() ? 1 : 0.6,
+            cursor: value.trim() ? "pointer" : "not-allowed",
+            opacity: value.trim() ? 1 : 0.6,
             whiteSpace: "nowrap",
           }}
         >
           Apply Filter
         </button>
-        {(appliedFilters.length > 0 || currentSearch) && (
+        {appliedFilters.length > 0 && (
           <button
-            onClick={clearAllFilters}
+            onClick={onClearAllFilters}
             className="button"
             style={{
-              padding: "10px 20px",
-              fontSize: "var(--font-size-md)",
+              padding: "8px 16px",
+              fontSize: "14px",
               border: `1px solid var(--border-color)`,
               backgroundColor: "white",
             }}
@@ -109,7 +103,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placeholder }) =
             >
               <span>{filter}</span>
               <button
-                onClick={() => removeFilter(index)}
+                onClick={() => onRemoveFilter(index)}
                 style={{
                   border: "none",
                   background: "none",
