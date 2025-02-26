@@ -1,182 +1,193 @@
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect } from 'react';
 import { Project } from '../types/Project';
-import { Calendar, ChevronDown } from 'react-feather';
 
-interface DateFilterProps {
+interface FilterButtonsProps {
   projects: Project[];
-  onApplyFilter: (filteredProjects: Project[], filterType: string) => void;
-  onClearFilter: () => void;
+  onSortedProjectsChange: (projects: Project[]) => void;
 }
 
-const dateFields = [
-  { key: 'commitmentDate', label: 'Commitment Date' },
-  { key: 'class5', label: 'Class 5' },
-  { key: 'class4', label: 'Class 4' },
-  { key: 'class3', label: 'Class 3' },
-  { key: 'class2', label: 'Class 2' },
-  { key: 'jeReadyToRoute', label: 'JE Ready' },
-  { key: 'jeApproved', label: 'JE Approved' },
-  { key: 'mob', label: 'mob' },
-  { key: 'ifc', label: 'IFC' }
-];
+export const FilterButtons = ({ projects, onSortedProjectsChange }: FilterButtonsProps) => {
+  const [selectedDateColumn, setSelectedDateColumn] = useState<string>('mob');
 
-const filterOptions = [
-  { key: 'upcoming30days', label: 'Next 30 Days', days: 30 },
-  { key: 'upcoming60days', label: 'Next 60 Days', days: 60 },
-  { key: 'upcoming90days', label: 'Next 90 Days', days: 90 },
-  { key: 'pastDue', label: 'Past Due', days: 0 }
-];
-
-const Dropdown = ({ style, children }: { style: React.CSSProperties, children: React.ReactNode }) => {
-  return createPortal(
-    <div style={{
-      ...style,
-      position: 'fixed',
-      zIndex: 9999,
-    }}>
-      {children}
-    </div>,
-    document.body
-  );
-};
-
-export const DateFilterButtons: React.FC<DateFilterProps> = ({ 
-  projects, 
-  onApplyFilter,
-  onClearFilter
-}) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedDateField, setSelectedDateField] = useState(dateFields[0]);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  // Date options for the dropdown
+  const dateColumns = [
+    { value: 'mob', label: 'MOB' },
+    { value: 'jeReadyToRoute', label: 'JE Ready to Route' },
+    { value: 'jeApproved', label: 'JE Approved' },
+    { value: 'class2', label: 'Class 2' },
+    { value: 'class3', label: 'Class 3' },
+    { value: 'class5', label: 'Class 5' },
+    { value: 'negotiatePrice', label: 'Negotiate Price' },
+  ];
 
   useEffect(() => {
-    if (isDropdownOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + 8,
-        left: rect.left
-      });
+    if (projects.length > 0) {
+      sortProjects(selectedDateColumn);
     }
-  }, [isDropdownOpen]);
+  }, [selectedDateColumn, projects]);
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
+  const sortProjects = (dateColumn: string) => {
+    // Create a deep copy of projects to avoid modifying the original array
+    const sortedProjects = [...projects];
 
-  const selectDateField = (field: typeof dateFields[0]) => {
-    setSelectedDateField(field);
-    setIsDropdownOpen(false);
-    setActiveFilter(null);
-    onClearFilter();
-  };
-
-  const getFilteredProjects = (filterKey: string, days: number) => {
-    const today = new Date();
-    const fieldKey = selectedDateField.key;
-    
-    return projects.filter(project => {
-      const dateValue = project[fieldKey];
-      if (!dateValue || typeof dateValue !== 'string') return false;
+    // Sort projects based on the selected date column
+    sortedProjects.sort((a, b) => {
+      const dateA = typeof a[dateColumn] === 'string' ? new Date(a[dateColumn] as string) : new Date(9999, 11, 31);
+      const dateB = typeof b[dateColumn] === 'string' ? new Date(b[dateColumn] as string) : new Date(9999, 11, 31);
       
-      try {
-        const projectDate = new Date(dateValue);
-        
-        if (isNaN(projectDate.getTime())) return false;
-        
-        if (filterKey === 'pastDue') {
-          return projectDate < today;
-        } else {
-          const timeDiff = projectDate.getTime() - today.getTime();
-          const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-          return dayDiff >= 0 && dayDiff <= days;
-        }
-      } catch (e) {
-        return false;
-      }
+      // Sort by date (ascending)
+      return dateA.getTime() - dateB.getTime();
     });
-  };
 
-  const handleFilterClick = (filterKey: string, days: number) => {
-    if (activeFilter === filterKey) {
-      setActiveFilter(null);
-      onClearFilter();
-      return;
-    }
-    
-    const filteredProjects = getFilteredProjects(filterKey, days);
-    setActiveFilter(filterKey);
-    onApplyFilter(filteredProjects, `${selectedDateField.label} - ${filterKey}`);
+    // Add a category field to each project for highlighting
+    const categorizedProjects = sortedProjects.map(project => {
+      const projectCopy = { ...project };
+      const dateValue = project[dateColumn];
+      
+      if (!dateValue) {
+        projectCopy.dateCategory = 'none';
+        return projectCopy;
+      }
+
+      const projectDate = typeof dateValue === 'string' ? new Date(dateValue) : new Date(9999, 11, 31);
+      const today = new Date();
+      
+      // Set the time component of today to midnight for accurate comparison
+      today.setHours(0, 0, 0, 0);
+      
+      // Calculate the end of current week (next Sunday)
+      const endOfWeek = new Date(today);
+      endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+      
+      // Calculate the end of current month
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      
+      // Calculate the end of next month
+      const endOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+      
+      // Calculate the end of next 3 months
+      const endOfNext3Months = new Date(today.getFullYear(), today.getMonth() + 3, 0);
+
+      // Determine category based on date range
+      if (projectDate <= endOfWeek) {
+        projectCopy.dateCategory = 'thisWeek'; // Red
+      } else if (projectDate <= endOfMonth) {
+        projectCopy.dateCategory = 'thisMonth'; // Yellow
+      } else if (projectDate <= endOfNextMonth) {
+        projectCopy.dateCategory = 'nextMonth'; // Light Green
+      } else if (projectDate <= endOfNext3Months) {
+        projectCopy.dateCategory = 'next3Months'; // Dark Green
+      } else {
+        projectCopy.dateCategory = 'future'; // No special highlight
+      }
+
+      return projectCopy;
+    });
+
+    // Pass the sorted and categorized projects back to the parent component
+    onSortedProjectsChange(categorizedProjects);
   };
 
   return (
-    <div className="responsive-filters" style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center', flexWrap: 'wrap' }}>
-      <div style={{ position: 'relative' }}>
-        <button
-          ref={buttonRef}
-          onClick={toggleDropdown}
-          className="button"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            minWidth: '150px',
-            backgroundColor: 'var(--bg-primary)',
-            border: '1px solid var(--border-color)',
+    <div style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <label 
+          htmlFor="dateColumnSelector" 
+          style={{ 
+            fontWeight: 'bold', 
+            color: 'var(--text-primary)',
+            fontSize: 'var(--font-size-md)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Calendar size={14} />
-            <span>{selectedDateField.label}</span>
-          </div>
-          <ChevronDown size={14} />
-        </button>
-
-        {isDropdownOpen && (
-          <Dropdown style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-            backgroundColor: 'var(--bg-primary)',
-            border: '1px solid var(--border-color)',
+          Sort by:
+        </label>
+        <select
+          id="dateColumnSelector"
+          value={selectedDateColumn}
+          onChange={(e) => setSelectedDateColumn(e.target.value)}
+          style={{
+            padding: '8px 12px',
             borderRadius: 'var(--border-radius-sm)',
-            boxShadow: '0 4px 6px var(--shadow-dark)',
-            width: '150px',
-          }}>
-            {dateFields.map((field) => (
-              <div
-                key={field.key}
-                style={{
-                  padding: 'var(--spacing-sm) var(--spacing-md)',
-                  cursor: 'pointer',
-                  backgroundColor: selectedDateField.key === field.key ? 'var(--bg-secondary)' : 'transparent',
-                  borderBottom: '1px solid var(--border-light)',
-                  fontSize: 'var(--font-size-sm)',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 
-                  selectedDateField.key === field.key ? 'var(--bg-secondary)' : 'transparent'}
-                onClick={() => selectDateField(field)}
-              >
-                {field.label}
-              </div>
-            ))}
-          </Dropdown>
-        )}
-      </div>
-
-      {filterOptions.map((option) => (
-        <button
-          key={option.key}
-          onClick={() => handleFilterClick(option.key, option.days)}
-          className={`button ${activeFilter === option.key ? 'button-primary' : ''}`}
+            border: '1px solid var(--border-color)',
+            backgroundColor: 'white',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            cursor: 'pointer',
+            fontSize: 'var(--font-size-md)',
+            minWidth: '200px'
+          }}
         >
-          {option.label}
-        </button>
-      ))}
+          {dateColumns.map((column) => (
+            <option key={column.value} value={column.value}>
+              {column.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      <div style={{ 
+        display: 'flex', 
+        gap: '15px', 
+        marginTop: '10px',
+        fontSize: 'var(--font-size-sm)'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '5px' 
+        }}>
+          <div style={{ 
+            width: '12px', 
+            height: '12px', 
+            backgroundColor: '#ffcdd2', 
+            borderRadius: '2px' 
+          }}></div>
+          <span>This Week</span>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '5px' 
+        }}>
+          <div style={{ 
+            width: '12px', 
+            height: '12px', 
+            backgroundColor: '#fff9c4', 
+            borderRadius: '2px' 
+          }}></div>
+          <span>This Month</span>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '5px' 
+        }}>
+          <div style={{ 
+            width: '12px', 
+            height: '12px', 
+            backgroundColor: '#c8e6c9', 
+            borderRadius: '2px' 
+          }}></div>
+          <span>Next Month</span>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '5px' 
+        }}>
+          <div style={{ 
+            width: '12px', 
+            height: '12px', 
+            backgroundColor: '#81c784', 
+            borderRadius: '2px' 
+          }}></div>
+          <span>Next 3 Months</span>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default DateFilterButtons;
+export default FilterButtons;

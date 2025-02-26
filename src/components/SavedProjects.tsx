@@ -427,8 +427,7 @@ export const SavedProjects = ({
         />
         <DateFilterButtons
           projects={projects}
-          onApplyFilter={handleDateFilter}
-          onClearFilter={handleClearDateFilter}
+          onSortedProjectsChange={handleDateFilter}
         />
       </div>
 
