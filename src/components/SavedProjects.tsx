@@ -464,6 +464,7 @@ export const SavedProjects = ({
             color: "white",
             background: "var(--primary-color)",
             margin: 0,
+            borderRadius: "5px 5px 0 0",
           }}
         >
           Saved Projects
@@ -689,26 +690,26 @@ export const SavedProjects = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginTop: "20px",
-          padding: "0 20px",
+          backgroundColor: "var(--primary-color)",
+          padding: "10px 20px",
+          marginTop: "auto",
+          borderRadius: "0 0 5px 5px",
         }}
       >
         <button
           onClick={handleRemoveProjects}
           style={{
-            backgroundColor:
-              selectedProjects.size > 0 ? "var(--primary-color)" : "#e0e0e0",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
             padding: "8px 16px",
+            backgroundColor: "white",
+            color: "var(--primary-color)",
+            border: "none",
+            borderRadius: "0",
             cursor: selectedProjects.size > 0 ? "pointer" : "not-allowed",
-            opacity: selectedProjects.size > 0 ? 1 : 0.7,
+            opacity: selectedProjects.size > 0 ? 1 : 0.6,
+            fontWeight: "bold",
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            position: "relative",
-            zIndex: 1,
           }}
           disabled={selectedProjects.size === 0}
         >
@@ -716,15 +717,16 @@ export const SavedProjects = ({
           Remove Selected ({selectedProjects.size})
         </button>
 
+        <div style={{ display: "flex", gap: "40px" }}>
+          {/* You can add buttons here if needed */}
+        </div>
+
         <div
           style={{
-            backgroundColor: "var(--bg-tertiary)",
-            color: "black",
+            backgroundColor: "white",
+            color: "var(--primary-color)",
             borderRadius: "4px",
             padding: "6px 12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
             fontWeight: "bold",
             fontSize: "14px",
           }}

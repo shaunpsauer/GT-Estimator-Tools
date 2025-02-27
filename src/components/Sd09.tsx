@@ -458,7 +458,6 @@ export const Sd09 = ({
             color: "white",
             background: "var(--primary-color)",
             margin: 0,
-            padding: "10px 20px",
             borderRadius: "5px 5px 0 0",
           }}
         >

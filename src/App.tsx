@@ -3,7 +3,7 @@ import MainLayout from "./components/MainLayout";
 import "./styles/global.css";
 import { Project } from "./types/Project";
 //import { Icon } from "@mui/material";
-import { Search, Save } from "react-feather";
+import { Search, Save, AlertTriangle } from "react-feather";
 
 interface NavButton {
   icon: React.ElementType;
@@ -82,6 +82,16 @@ function App() {
       label: "Saved Projects",
       view: "saved-projects",
     },
+    {
+      icon: AlertTriangle,
+      label: "Future Tools",
+      view: "future-tools",
+    },
+    {
+      icon: AlertTriangle,
+      label: "Future Tools",
+      view: "future-tools",
+    },
   ];
 
   const handleNavagation = (view: string) => {
@@ -94,6 +104,8 @@ function App() {
       <div
         style={{
           textAlign: "center",
+          fontWeight: "bold",
+          //textShadow: "0 0 5px var(--primary-color)",
           padding: "var(--spacing-xl)",
           display: "flex",
           flexDirection: "column",
