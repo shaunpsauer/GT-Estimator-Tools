@@ -224,12 +224,13 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
       className="app-container"
       style={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
+        backgroundColor: "var(--bg-secondary)",
+        overflow: "hidden",
       }}
     >
       <Sidebar
         onSettingsClick={handleSettingsClick}
-        onCollapse={() => {}}
         onViewSD09={handleViewSD09}
         onHomeClick={handleHomeClick}
         onViewSavedProjects={handleViewSavedProjects}
@@ -240,26 +241,26 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
       <main
         style={{
           flex: 1,
-          padding: "var(--spacing-sm)",
+          padding: "0",
           backgroundColor: "var(--bg-secondary)",
-          transition: "margin-left 0.3s ease-in-out",
-          marginLeft: "0",
-          width: "100%", // Ensure main takes full width available
+          marginLeft: "110px",
+          width: "calc(100% - 110px)",
           display: "flex",
-          justifyContent: "center", // Center the content horizontally
+          justifyContent: "center",
+          height: "100vh",
+          overflow: "hidden",
         }}
       >
         <div
           style={{
-            width: "100%", // Take full width of parent
-            maxWidth: "calc(100% - 200px", // Maximum width on large screens
-            margin: "25px", // Remove auto margins and let flex handle centering
-            marginRight: "50px",
-            minHeight: "90vh", // Use viewport height units for responsive height
+            width: "100%",
+            maxWidth: "1600px",
+            margin: "25px",
+            height: "calc(100vh - 50px)",
             backgroundColor: "var(--bg-primary)",
             borderRadius: "var(--border-radius-md)",
             boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-            overflow: "hidden",
+            overflow: "auto",
             display: "flex",
             flexDirection: "column",
           }}
@@ -278,6 +279,10 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
                   return [...prev, ...newProjects];
                 });
               }}
+              onSettingsClick={handleSettingsClick}
+              onViewSavedProjects={handleViewSavedProjects}
+              onProjectsLoad={handleProjectsLoad}
+              onViewSD09={handleViewSD09}
             />
           ) : (
             <SavedProjects

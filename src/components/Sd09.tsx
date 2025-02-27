@@ -1,16 +1,22 @@
 import { useState, useEffect } from "react";
 import { Project, VisibleColumns } from "../types/Project";
-import { PlusCircle, MinusCircle } from "react-feather";
+import { PlusCircle, MinusCircle, Upload, Settings, Save } from "react-feather";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { db } from "../services/db";
 import ProjectDetails from "./ProjectDetails";
 import SearchBar from "./SearchBar";
+import React from "react";
+import { parseExcelFile } from "../services/excelService";
 
 interface Sd09Props {
   projects: Project[];
   visibleColumns: VisibleColumns;
   onSelectedProjectsChange?: (projects: Project[]) => void;
   onSaveProjects?: (projects: Project[]) => void;
+  onSettingsClick?: () => void;
+  onViewSavedProjects?: () => void;
+  onProjectsLoad?: (projects: Project[]) => void;
+  onViewSD09?: () => void;
 }
 
 export const Sd09 = ({
@@ -18,6 +24,10 @@ export const Sd09 = ({
   visibleColumns,
   onSelectedProjectsChange,
   onSaveProjects,
+  onSettingsClick,
+  onViewSavedProjects,
+  onProjectsLoad,
+  onViewSD09,
 }: Sd09Props) => {
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(
     new Set()
@@ -81,6 +91,8 @@ export const Sd09 = ({
     "enro",
     "unitCapture",
   ];
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadExistingProjects();
@@ -401,6 +413,19 @@ export const Sd09 = ({
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const projects = await parseExcelFile(file);
+      onProjectsLoad?.(projects);
+      onViewSD09?.();
+    } catch (error) {
+      console.error("Error parsing Excel file:", error);
+    }
+  };
+
   return (
     <div
       style={{
@@ -433,6 +458,8 @@ export const Sd09 = ({
             color: "white",
             background: "var(--primary-color)",
             margin: 0,
+            padding: "10px 20px",
+            borderRadius: "5px 5px 0 0",
           }}
         >
           Schedule Items
@@ -590,10 +617,9 @@ export const Sd09 = ({
                     e.currentTarget.style.backgroundColor = bgColor;
                   }}
                   onClick={(e) => {
-                    if (
-                      (e.target as HTMLElement).closest("td")?.cellIndex === 0
-                    )
+                    if ((e.target as HTMLElement).closest("td")?.cellIndex === 0) {
                       return;
+                    }
                     setExpandedProject(project);
                   }}
                 >
@@ -649,7 +675,7 @@ export const Sd09 = ({
                   }}
                 >
                   {projects.length === 0
-                    ? "Please select an Excel file to load projects"
+                    ? "Please select an SD-09 Excel file to load projects"
                     : "No matching results found"}
                 </td>
               </tr>
@@ -663,8 +689,10 @@ export const Sd09 = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginTop: "20px",
-          padding: "0 20px",
+          backgroundColor: "var(--primary-color)",
+          padding: "10px 20px",
+          marginTop: "auto",
+          borderRadius: "0 0 5px 5px",
         }}
       >
         <button
@@ -674,33 +702,97 @@ export const Sd09 = ({
                 selectedProjects.has(p.id)
               );
               onSaveProjects(projectsToSave);
-              // Save to database
               handleAddToMyProjects();
               setSelectedProjects(new Set());
             }
           }}
           style={{
             padding: "8px 16px",
-            backgroundColor: "var(--primary-color)",
-            color: "white",
+            backgroundColor: "white",
+            color: "var(--primary-color)",
             border: "none",
-            borderRadius: "4px",
+            borderRadius: "0",
             cursor: selectedProjects.size === 0 ? "not-allowed" : "pointer",
             opacity: selectedProjects.size === 0 ? 0.6 : 1,
+            fontWeight: "bold",
           }}
         >
           Save Selected ({selectedProjects.size})
         </button>
 
+        <div style={{ display: "flex", gap: "40px" }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            style={{ display: "none" }}
+            onChange={handleFileUpload}
+          />
+          
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "5px",
+              color: "white",
+            }}
+          >
+            <Upload size={24} />
+            <span style={{ fontSize: "12px" }}>Upload</span>
+          </button>
+
+          <button
+            onClick={() => {
+              console.log("Settings clicked");
+              onSettingsClick?.();
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "5px",
+              color: "white",
+            }}
+          >
+            <Settings size={24} />
+            <span style={{ fontSize: "12px" }}>Settings</span>
+          </button>
+
+          <button
+            onClick={() => {
+              console.log("Saved Projects clicked");
+              onViewSavedProjects?.();
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "5px",
+              color: "white",
+            }}
+          >
+            <Save size={24} />
+            <span style={{ fontSize: "12px" }}>Saved</span>
+          </button>
+        </div>
+
         <div
           style={{
-            backgroundColor: "var(--bg-tertiary)",
-            color: "black",
+            backgroundColor: "white",
+            color: "var(--primary-color)",
             borderRadius: "4px",
             padding: "6px 12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
             fontWeight: "bold",
             fontSize: "14px",
           }}
