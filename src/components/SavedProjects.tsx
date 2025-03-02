@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Project, VisibleColumns } from "../types/Project";
-import { PlusCircle, MinusCircle } from "react-feather";
+import { MinusCircle, PlusCircle } from "react-feather";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { db } from "../services/db";
 import ProjectDetails from "./ProjectDetails";
@@ -14,244 +14,188 @@ interface SavedProjectsProps {
   onRemoveProjects?: (projects: Project[]) => void;
 }
 
+// Extract constant values outside component
+const SETTINGS_ORDER: (keyof VisibleColumns)[] = [
+  "costEstimator",
+  "costEstimatorRequest",
+  "ade",
+  "projectManager",
+  "projectEngineer",
+  "designEstimator",
+  "constructionContractor",
+  "bundleId",
+  "postEstimate",
+  "pmoId",
+  "order",
+  "multipleOrder",
+  "mat",
+  "projectName",
+  "workStream",
+  "workType",
+  "engrPlanYear",
+  "constPlanYear",
+  "commitmentDate",
+  "station",
+  "line",
+  "mp1",
+  "mp2",
+  "city",
+  "county",
+  "class5",
+  "class4",
+  "class3",
+  "class2",
+  "negotiatePrice",
+  "jeReadyToRoute",
+  "jeApproved",
+  "estimateAnalysis",
+  "thirtyPercentDesignReviewMeeting",
+  "thirtyPercentDesignAvailable",
+  "sixtyPercentDesignReviewMeeting",
+  "sixtyPercentDesignAvailable",
+  "ninetyPercentDesignReviewMeeting",
+  "ninetyPercentDesignAvailable",
+  "ifc",
+  "ntp",
+  "mob",
+  "tieIn",
+  "enro",
+  "unitCapture",
+];
+
+const DATE_COLUMNS = [
+  "class5",
+  "class4",
+  "class3",
+  "class2",
+  "negotiatePrice",
+  "jeReadyToRoute",
+  "jeApproved",
+  "thirtyPercentDesignReviewMeeting",
+  "thirtyPercentDesignAvailable",
+  "sixtyPercentDesignReviewMeeting",
+  "sixtyPercentDesignAvailable",
+  "ninetyPercentDesignReviewMeeting",
+  "ninetyPercentDesignAvailable",
+  "ifc",
+  "ntp",
+  "mob",
+  "tieIn",
+  "enro",
+  "unitCapture",
+];
+
+// Pre-define column formatting map
+const COLUMN_LABELS: Record<string, string> = {
+  // Team Members
+  costEstimator: "Cost Est.",
+  costEstimatorRequest: "Cost Est. Req.",
+  projectManager: "PM",
+  projectEngineer: "Proj. Eng.",
+  designEstimator: "Design Est.",
+  constructionContractor: "Contractor",
+  ade: "ADE",
+
+  // Project Info
+  pmoId: "PMO ID",
+  order: "Order",
+  multipleOrder: "Multi Order",
+  bundleId: "Bundle ID",
+  postEstimate: "Post Est.",
+  mat: "MAT",
+  projectName: "Project",
+  workStream: "Stream",
+  workType: "Type",
+  station: "Station",
+  line: "LINE",
+  city: "City",
+  county: "County",
+
+  // Years & Dates
+  engrPlanYear: "Eng. Year",
+  constPlanYear: "Const. Year",
+  commitmentDate: "Commit Date",
+
+  // Milestones
+  thirtyPercentDesignReviewMeeting: "30% Review",
+  thirtyPercentDesignAvailable: "30% Design",
+  sixtyPercentDesignReviewMeeting: "60% Review",
+  sixtyPercentDesignAvailable: "60% Design",
+  ninetyPercentDesignReviewMeeting: "90% Review",
+  ninetyPercentDesignAvailable: "90% Design",
+  ifc: "IFC",
+  class5: "CLASS 5",
+  class4: "CLASS 4",
+  class3: "CLASS 3",
+  class2: "CLASS 2",
+  negotiatePrice: "Neg. Price",
+  jeReadyToRoute: "JE Ready",
+  jeApproved: "JE Appr.",
+  estimateAnalysis: "Est. Analysis",
+  ntp: "NTP",
+  mob: "MOB",
+  mp1: "MP1",
+  mp2: "MP2",
+  tieIn: "Tie-in",
+  enro: "ENRO",
+  unitCapture: "Unit Cap.",
+};
+
+// Row styling for different categories
+const ROW_STYLES: Record<string, React.CSSProperties> = {
+  thisWeek: { backgroundColor: '#ffcdd2' }, // Red
+  nextWeek: { backgroundColor: '#fff9c4' }, // Yellow
+  thisMonth: { backgroundColor: '#c8e6c9' }, // Light green
+  next3Months: { backgroundColor: '#81c784' }, // Dark green
+  default: {},
+};
+
+// Create a formatter function outside the component to avoid recreating it
+const formatColumnName = (column: string): string => {
+  return COLUMN_LABELS[column] || 
+    column.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
+};
+
 export const SavedProjects = ({
   projects,
   visibleColumns,
   onSelectedProjectsChange,
   onRemoveProjects,
 }: SavedProjectsProps) => {
-  const [selectedProjects, setSelectedProjects] = useState<Set<number>>(
-    new Set()
-  );
+  const [selectedProjects, setSelectedProjects] = useState<Set<number>>(new Set());
   const [expandedProject, setExpandedProject] = useState<Project | null>(null);
   const [searchValue, setSearchValue] = useState("");
-  const [pinnedColumns, setPinnedColumns] = useState<{
-    [key: string]: boolean;
-  }>({
+  const [pinnedColumns, setPinnedColumns] = useState<{ [key: string]: boolean }>({
     pmoId: false,
     order: false,
   });
-  const [, setExistingProjectIds] = useState<Set<number>>(new Set());
-  const [dateFilteredProjects, setDateFilteredProjects] = useState<Project[]>(
-    []
-  );
+  const [dateFilteredProjects, setDateFilteredProjects] = useState<Project[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
 
+  // Load projects from IndexedDB only once on component mount
   useEffect(() => {
-    loadExistingProjects();
+    db.getProjects()
+      .catch(error => console.error("Error loading existing projects:", error));
   }, []);
 
-  const loadExistingProjects = async () => {
-    try {
-      const existingProjects = await db.getProjects();
-      setExistingProjectIds(new Set(existingProjects.map((p) => p.id)));
-    } catch (error) {
-      console.error("Error loading existing projects:", error);
-    }
-  };
-
-  const handleRemoveProjects = async () => {
-    const selectedProjectsList = projects.filter((p) =>
-      selectedProjects.has(p.id)
-    );
-
-    for (const project of selectedProjectsList) {
-      try {
-        await db.deleteProject(project.id);
-      } catch (error) {
-        console.error("Error deleting project:", error);
-      }
-    }
-
-    if (onRemoveProjects) {
-      onRemoveProjects(selectedProjectsList);
-    }
-    setSelectedProjects(new Set());
-  };
-
-  const settingsOrder: (keyof VisibleColumns)[] = [
-    "costEstimator",
-    "costEstimatorRequest",
-    "ade",
-    "projectManager",
-    "projectEngineer",
-    "designEstimator",
-    "constructionContractor",
-    "bundleId",
-    "postEstimate",
-    "pmoId",
-    "order",
-    "multipleOrder",
-    "mat",
-    "projectName",
-    "workStream",
-    "workType",
-    "engrPlanYear",
-    "constPlanYear",
-    "commitmentDate",
-    "station",
-    "line",
-    "mp1",
-    "mp2",
-    "city",
-    "county",
-    "class5",
-    "class4",
-    "class3",
-    "class2",
-    "negotiatePrice",
-    "jeReadyToRoute",
-    "jeApproved",
-    "estimateAnalysis",
-    "thirtyPercentDesignReviewMeeting",
-    "thirtyPercentDesignAvailable",
-    "sixtyPercentDesignReviewMeeting",
-    "sixtyPercentDesignAvailable",
-    "ninetyPercentDesignReviewMeeting",
-    "ninetyPercentDesignAvailable",
-    "ifc",
-    "ntp",
-    "mob",
-    "tieIn",
-    "enro",
-    "unitCapture",
-  ];
-
-  const formatCellValue = (column: string, value: any, project: Project) => {
-    const dateColumns = [
-      "class5",
-      "class4",
-      "class3",
-      "class2",
-      "negotiatePrice",
-      "jeReadyToRoute",
-      "jeApproved",
-      "thirtyPercentDesignReviewMeeting",
-      "thirtyPercentDesignAvailable",
-      "sixtyPercentDesignReviewMeeting",
-      "sixtyPercentDesignAvailable",
-      "ninetyPercentDesignReviewMeeting",
-      "ninetyPercentDesignAvailable",
-      "ifc",
-      "ntp",
-      "mob",
-      "tieIn",
-      "enro",
-      "unitCapture",
-    ];
-
-    const hasChanged = project._changes && column in project._changes;
-
-    const cellContent =
-      dateColumns.includes(column) && value
-        ? typeof value === "string" && value.includes("/")
-          ? value
-          : value
-        : value !== undefined
-        ? String(value)
-        : "N/A";
-
-    if (hasChanged) {
-      return (
-        <div
-          style={{
-            backgroundColor: "rgba(255, 255, 0, 0.2)", // Light yellow highlight
-            padding: "2px 4px",
-            borderRadius: "2px",
-            position: "relative",
-            cursor: "help",
-          }}
-          title={`Changed from: ${project._changes![column as keyof Project]}`}
-        >
-          {cellContent}
-        </div>
-      );
-    }
-
-    return cellContent;
-  };
-
-  const formatColumnName = (column: string): string => {
-    const formattedLabels: Record<string, string> = {
-      // Team Members
-      costEstimator: "Cost Est.",
-      costEstimatorRequest: "Cost Est. Req.",
-      projectManager: "PM",
-      projectEngineer: "Proj. Eng.",
-      designEstimator: "Design Est.",
-      constructionContractor: "Contractor",
-      ade: "ADE",
-
-      // Project Info
-      pmoId: "PMO ID",
-      order: "Order",
-      multipleOrder: "Multi Order",
-      bundleId: "Bundle ID",
-      postEstimate: "Post Est.",
-      mat: "MAT",
-      projectName: "Project",
-      workStream: "Stream",
-      workType: "Type",
-      station: "Station",
-      line: "LINE",
-      city: "City",
-      county: "County",
-
-      // Years & Dates
-      engrPlanYear: "Eng. Year",
-      constPlanYear: "Const. Year",
-      commitmentDate: "Commit Date",
-
-      // Milestones
-      thirtyPercentDesignReviewMeeting: "30% Review",
-      thirtyPercentDesignAvailable: "30% Design",
-      sixtyPercentDesignReviewMeeting: "60% Review",
-      sixtyPercentDesignAvailable: "60% Design",
-      ninetyPercentDesignReviewMeeting: "90% Review",
-      ninetyPercentDesignAvailable: "90% Design",
-      ifc: "IFC",
-      class5: "CLASS 5",
-      class4: "CLASS 4",
-      class3: "CLASS 3",
-      class2: "CLASS 2",
-      negotiatePrice: "Neg. Price",
-      jeReadyToRoute: "JE Ready",
-      jeApproved: "JE Appr.",
-      estimateAnalysis: "Est. Analysis",
-      ntp: "NTP",
-      mob: "MOB",
-      mp1: "MP1",
-      mp2: "MP2",
-      tieIn: "Tie-in",
-      enro: "ENRO",
-      unitCapture: "Unit Cap.",
-    };
-
-    return (
-      formattedLabels[column] ||
-      column
-        .replace(/([A-Z])/g, " $1")
-        .replace(/^./, (str) => str.toUpperCase())
-    );
-  };
-
-  const parseSearchTerm = (searchTerm: string) => {
+  // Memoize the parsing of search terms for better performance
+  const parseSearchTerm = useCallback((searchTerm: string) => {
     const match = searchTerm.match(/^([^:]+):(.+)$/);
     if (match) {
       const [_, column, value] = match;
       return { column: column.trim(), value: value.trim() };
     }
     return null;
-  };
+  }, []);
 
+  // Memoized filtered projects - this is the most expensive calculation
   const filteredProjects = useMemo(() => {
-    let filtered = projects;
-
-    if (dateFilteredProjects.length > 0) {
-      filtered = dateFilteredProjects;
-    }
-
-    return filtered.filter((project) => {
+    // Start with either date-filtered projects or all projects
+    const baseProjects = dateFilteredProjects.length > 0 ? dateFilteredProjects : projects;
+    
+    if (appliedFilters.length === 0) return baseProjects;
+    
+    return baseProjects.filter((project) => {
       return appliedFilters.every((filter) => {
         const parsedFilter = parseSearchTerm(filter);
         
@@ -272,8 +216,6 @@ export const SavedProjects = ({
                    String(projectValue).toLowerCase().includes(value.toLowerCase());
           }
           
-          // If column not found, return false to filter out this item
-          console.log(`Column not found: ${column}`);
           return false;
         }
 
@@ -285,38 +227,10 @@ export const SavedProjects = ({
           );
       });
     });
-  }, [projects, appliedFilters, dateFilteredProjects, visibleColumns]);
+  }, [projects, appliedFilters, dateFilteredProjects, visibleColumns, parseSearchTerm]);
 
-  const handleSelectAll = () => {
-    if (selectedProjects.size === filteredProjects.length) {
-      setSelectedProjects(new Set());
-    } else {
-      const allIds = filteredProjects.map((p) => p.id);
-      setSelectedProjects(new Set(allIds));
-    }
-  };
-
-  const handleSelectProject = (project: Project) => {
-    const newSelected = new Set(selectedProjects);
-    if (selectedProjects.has(project.id)) {
-      newSelected.delete(project.id);
-    } else {
-      newSelected.add(project.id);
-    }
-    setSelectedProjects(newSelected);
-    onSelectedProjectsChange?.(
-      filteredProjects.filter((p) => newSelected.has(p.id))
-    );
-  };
-
-  const togglePinnedColumn = (column: string) => {
-    setPinnedColumns((prev) => ({
-      ...prev,
-      [column]: !prev[column],
-    }));
-  };
-
-  const getCellStyle = (
+  // Memoized cell style function to avoid recreating this function for every cell
+  const getCellStyle = useCallback((
     isPinned: boolean = false,
     column?: string,
     isHeader: boolean = false,
@@ -337,12 +251,12 @@ export const SavedProjects = ({
     top: isHeader ? 0 : undefined,
     zIndex: isHeader ? (isPinned ? 3 : 2) : isPinned ? 1 : 0,
     backgroundColor: isHeader
-      ? "#e9ecef" // Header background
+      ? "#e9ecef"
       : isPinned
       ? rowIndex !== undefined && rowIndex % 2 === 0
         ? "#f8f9fa"
-        : "white" // Pinned cells match row pattern
-      : "inherit", // Non-pinned cells inherit from row
+        : "white"
+      : "inherit",
     height: isHeader ? "24px" : "32px",
     ...(isPinned
       ? {
@@ -351,87 +265,170 @@ export const SavedProjects = ({
         }
       : {}),
     whiteSpace: "nowrap" as const,
-  });
+  }), []);
 
-  const handleDateFilter = (filtered: Project[]) => {
-    setDateFilteredProjects(filtered);
-  };
+  // Optimize event handlers with useCallback
+  const handleRemoveProjects = useCallback(async () => {
+    const selectedProjectsList = projects.filter((p) => selectedProjects.has(p.id));
 
-  const getRowStyle = (category: string) => {
-    switch (category) {
-      case 'thisWeek':
-        return { backgroundColor: '#ffcdd2' }; // Red
-      case 'nextWeek':
-        return { backgroundColor: '#fff9c4' }; // Yellow
-      case 'thisMonth':
-        return { backgroundColor: '#c8e6c9' }; // Light green
-      case 'next3Months':
-        return { backgroundColor: '#81c784' }; // Dark green
-      default:
-        return {};
+    // Use Promise.all for better performance with multiple async operations
+    await Promise.all(
+      selectedProjectsList.map(project => 
+        db.deleteProject(project.id)
+          .catch(error => console.error(`Error deleting project ${project.id}:`, error))
+      )
+    );
+
+    if (onRemoveProjects) {
+      onRemoveProjects(selectedProjectsList);
     }
-  };
+    
+    setSelectedProjects(new Set());
+  }, [projects, selectedProjects, onRemoveProjects]);
 
-  const handleApplyFilter = (filter: string) => {
-    setAppliedFilters([...appliedFilters, filter]);
-  };
+  const handleSelectAll = useCallback(() => {
+    setSelectedProjects(prev => 
+      prev.size === filteredProjects.length
+        ? new Set()
+        : new Set(filteredProjects.map(p => p.id))
+    );
+  }, [filteredProjects]);
 
-  const handleRemoveFilter = (indexToRemove: number) => {
-    setAppliedFilters(appliedFilters.filter((_, index) => index !== indexToRemove));
-  };
+  const handleSelectProject = useCallback((project: Project) => {
+    setSelectedProjects(prev => {
+      const newSelected = new Set(prev);
+      if (prev.has(project.id)) {
+        newSelected.delete(project.id);
+      } else {
+        newSelected.add(project.id);
+      }
+      
+      // Notify parent component if callback exists
+      if (onSelectedProjectsChange) {
+        const selectedProjs = filteredProjects.filter(p => newSelected.has(p.id));
+        onSelectedProjectsChange(selectedProjs);
+      }
+      
+      return newSelected;
+    });
+  }, [filteredProjects, onSelectedProjectsChange]);
 
-  const handleClearAllFilters = () => {
+  const togglePinnedColumn = useCallback((column: string) => {
+    setPinnedColumns(prev => ({
+      ...prev,
+      [column]: !prev[column],
+    }));
+  }, []);
+
+  const handleDateFilter = useCallback((filtered: Project[]) => {
+    setDateFilteredProjects(filtered);
+  }, []);
+
+  const handleApplyFilter = useCallback((filter: string) => {
+    setAppliedFilters(prev => [...prev, filter]);
+  }, []);
+
+  const handleRemoveFilter = useCallback((indexToRemove: number) => {
+    setAppliedFilters(prev => prev.filter((_, index) => index !== indexToRemove));
+  }, []);
+
+  const handleClearAllFilters = useCallback(() => {
     setAppliedFilters([]);
     setSearchValue("");
-  };
+  }, []);
 
-  const formattedLabels = {
-    "PMO ID": "PMO ID",
-    "Order": "Order",
-    "Cost Est.": "Cost Est.",
-    "Cost Est. Req.": "Cost Est. Req.",
-    "ADE": "ADE",
-    "PM": "PM",
-    "Proj. Eng.": "Proj. Eng.",
-    "Design Est.": "Design Est.",
-    "Contractor": "Contractor",
-    "Bundle ID": "Bundle ID",
-    "Post Est.": "Post Est.",
-    "MAT": "MAT",
-    "Project": "Project",
-    "Stream": "Stream",
-    "Type": "Type",
-    "Station": "Station",
-    "LINE": "LINE",
-    "City": "City",
-    "County": "County",
-    "Eng. Year": "Eng. Year",
-    "Const. Year": "Const. Year",
-    "Commit Date": "Commit Date",
-    "30% Review": "30% Review",
-    "30% Design": "30% Design",
-    "60% Review": "60% Review",
-    "60% Design": "60% Design",
-    "90% Review": "90% Review",
-    "90% Design": "90% Design",
-    "IFC": "IFC",
-    "CLASS 5": "CLASS 5",
-    "CLASS 4": "CLASS 4",
-    "CLASS 3": "CLASS 3",
-    "CLASS 2": "CLASS 2",
-    "Neg. Price": "Neg. Price",
-    "JE Ready": "JE Ready",
-    "JE Appr.": "JE Appr.",
-    "Est. Analysis": "Est. Analysis",
-    "NTP": "NTP",
-    "MOB": "MOB",
-    "MP1": "MP1",
-    "MP2": "MP2",
-    "Tie-in": "Tie-in",
-    "ENRO": "ENRO",
-    "Unit Cap.": "Unit Cap."
-  };
+  // Component for rendering cell content (memoize heavy DOM operations)
+  const CellContent = useCallback(({ column, value, project }: { 
+    column: string; 
+    value: any; 
+    project: Project;
+  }) => {
+    const hasChanged = project._changes && column in project._changes;
+    const isDateColumn = DATE_COLUMNS.includes(column);
+    
+    const cellContent = 
+      isDateColumn && value
+        ? typeof value === "string" && value.includes("/")
+          ? value
+          : value
+        : value !== undefined
+        ? String(value)
+        : "N/A";
 
+    if (hasChanged) {
+      return (
+        <div
+          style={{
+            backgroundColor: "rgba(255, 255, 0, 0.2)",
+            padding: "2px 4px",
+            borderRadius: "2px",
+            position: "relative",
+            cursor: "help",
+          }}
+          title={`Changed from: ${project._changes![column as keyof Project]}`}
+        >
+          {cellContent}
+        </div>
+      );
+    }
+
+    return <>{cellContent}</>;
+  }, []);
+
+  // Memoize column header rendering to avoid recreating elements on every render
+  const tableHeaders = useMemo(() => {
+    return (
+      <tr style={{ background: "var(--bg-secondary)" }}>
+        <th
+          style={{
+            ...getCellStyle(true, "select", true),
+            width: "80px",
+            minWidth: "80px",
+          }}
+        >
+          <ToggleSwitch
+            checked={selectedProjects.size === filteredProjects.length && filteredProjects.length > 0}
+            onChange={handleSelectAll}
+            label="Select All"
+          />
+        </th>
+        {pinnedColumns.pmoId && (
+          <th
+            style={{
+              ...getCellStyle(true, "pmoId", true),
+              width: "80px",
+            }}
+          >
+            PMO ID
+          </th>
+        )}
+        {pinnedColumns.order && (
+          <th
+            style={{
+              ...getCellStyle(true, "order", true),
+              width: "80px",
+            }}
+          >
+            Order
+          </th>
+        )}
+        {SETTINGS_ORDER.map(
+          (column) =>
+            visibleColumns[column] &&
+            !pinnedColumns[column] && (
+              <th
+                key={column}
+                style={getCellStyle(false, undefined, true)}
+              >
+                {formatColumnName(column)}
+              </th>
+            )
+        )}
+      </tr>
+    );
+  }, [getCellStyle, pinnedColumns, visibleColumns, selectedProjects.size, filteredProjects.length, handleSelectAll]);
+
+  // Main component render
   return (
     <div
       style={{
@@ -472,53 +469,32 @@ export const SavedProjects = ({
       </div>
 
       <div style={{ marginBottom: "10px", display: "flex", gap: "10px" }}>
-        <button
-          onClick={() => togglePinnedColumn("pmoId")}
-          style={{
-            padding: "4px 8px",
-            backgroundColor: pinnedColumns.pmoId
-              ? "var(--primary-color)"
-              : "#f8f9fa",
-            color: pinnedColumns.pmoId ? "white" : "black",
-            border: "1px solid var(--border-color)",
-            borderRadius: "4px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          {pinnedColumns.pmoId ? "Unpin" : "Pin"} PMO ID
-          {pinnedColumns.pmoId ? (
-            <MinusCircle size={14} />
-          ) : (
-            <PlusCircle size={14} />
-          )}
-        </button>
-
-        <button
-          onClick={() => togglePinnedColumn("order")}
-          style={{
-            padding: "4px 8px",
-            backgroundColor: pinnedColumns.order
-              ? "var(--primary-color)"
-              : "#f8f9fa",
-            color: pinnedColumns.order ? "white" : "black",
-            border: "1px solid var(--border-color)",
-            borderRadius: "4px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          {pinnedColumns.order ? "Unpin" : "Pin"} Order
-          {pinnedColumns.order ? (
-            <MinusCircle size={14} />
-          ) : (
-            <PlusCircle size={14} />
-          )}
-        </button>
+        {["pmoId", "order"].map(column => (
+          <button
+            key={column}
+            onClick={() => togglePinnedColumn(column)}
+            style={{
+              padding: "4px 8px",
+              backgroundColor: pinnedColumns[column]
+                ? "var(--primary-color)"
+                : "#f8f9fa",
+              color: pinnedColumns[column] ? "white" : "black",
+              border: "1px solid var(--border-color)",
+              borderRadius: "4px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            {pinnedColumns[column] ? "Unpin" : "Pin"} {column === "pmoId" ? "PMO ID" : "Order"}
+            {pinnedColumns[column] ? (
+              <MinusCircle size={14} />
+            ) : (
+              <PlusCircle size={14} />
+            )}
+          </button>
+        ))}
       </div>
 
       <div
@@ -533,7 +509,7 @@ export const SavedProjects = ({
           onClearAllFilters={handleClearAllFilters}
           appliedFilters={appliedFilters}
           placeholder="Search projects..."
-          columnNames={formattedLabels}
+          columnNames={COLUMN_LABELS}
         />
         <DateFilterButtons
           projects={projects}
@@ -551,125 +527,84 @@ export const SavedProjects = ({
           }}
         >
           <thead>
-            <tr style={{ background: "var(--bg-secondary)" }}>
-              <th
-                style={{
-                  ...getCellStyle(true, "select", true),
-                  width: "80px",
-                  minWidth: "80px",
-                }}
-              >
-                <ToggleSwitch
-                  checked={selectedProjects.size === filteredProjects.length}
-                  onChange={handleSelectAll}
-                  label="Select All"
-                />
-              </th>
-              {pinnedColumns.pmoId && (
-                <th
-                  style={{
-                    ...getCellStyle(true, "pmoId", true),
-                    width: "80px",
-                  }}
-                >
-                  PMO ID
-                </th>
-              )}
-              {pinnedColumns.order && (
-                <th
-                  style={{
-                    ...getCellStyle(true, "order", true),
-                    width: "80px",
-                  }}
-                >
-                  Order
-                </th>
-              )}
-              {settingsOrder.map(
-                (column) =>
-                  visibleColumns[column] &&
-                  !pinnedColumns[column] && (
-                    <th
-                      key={column}
-                      style={getCellStyle(false, undefined, true)}
-                    >
-                      {formatColumnName(column)}
-                    </th>
-                  )
-              )}
-            </tr>
+            {tableHeaders}
           </thead>
           <tbody>
             {filteredProjects.length > 0 ? (
-              filteredProjects.map((project, index) => (
-                <tr
-                  key={project.id}
-                  style={{
-                    cursor: "pointer",
-                    ...getRowStyle(project.dateCategory as string)
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
-                  onMouseLeave={(e) => {
-                    const bgColor = project.dateCategory && typeof project.dateCategory === 'string'
-                      ? getRowStyle(project.dateCategory).backgroundColor
-                      : index % 2 === 0 ? "#f8f9fa" : "white";
-                    e.currentTarget.style.backgroundColor = bgColor || "#ffffff";
-                  }}
-                  onClick={(e) => {
-                    if (
-                      (e.target as HTMLElement).closest("td")?.cellIndex === 0
-                    )
-                      return;
-                    setExpandedProject(project);
-                  }}
-                >
-                  <td
+              filteredProjects.map((project, index) => {
+                const rowCategory = project.dateCategory as string;
+                const rowStyle = rowCategory ? ROW_STYLES[rowCategory] || ROW_STYLES.default : {};
+                
+                return (
+                  <tr
+                    key={project.id}
                     style={{
-                      ...getCellStyle(true, "select"),
+                      cursor: "pointer",
+                      ...rowStyle
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
+                    onMouseLeave={(e) => {
+                      const bgColor = rowCategory
+                        ? ROW_STYLES[rowCategory]?.backgroundColor
+                        : index % 2 === 0 ? "#f8f9fa" : "white";
+                      e.currentTarget.style.backgroundColor = bgColor || "#ffffff";
+                    }}
+                    onClick={(e) => {
+                      if (
+                        (e.target as HTMLElement).closest("td")?.cellIndex === 0
+                      )
+                        return;
+                      setExpandedProject(project);
                     }}
                   >
-                    <ToggleSwitch
-                      checked={selectedProjects.has(project.id)}
-                      onChange={() => handleSelectProject(project)}
-                    />
-                  </td>
-                  {pinnedColumns.pmoId && (
                     <td
                       style={{
-                        ...getCellStyle(true, "pmoId", false, index),
+                        ...getCellStyle(true, "select"),
                       }}
                     >
-                      {project.pmoId}
+                      <ToggleSwitch
+                        checked={selectedProjects.has(project.id)}
+                        onChange={() => handleSelectProject(project)}
+                      />
                     </td>
-                  )}
-                  {pinnedColumns.order && (
-                    <td
-                      style={{
-                        ...getCellStyle(true, "order", false, index),
-                      }}
-                    >
-                      {project.order}
-                    </td>
-                  )}
-                  {settingsOrder.map(
-                    (column) =>
-                      visibleColumns[column] &&
-                      !pinnedColumns[column] && (
-                        <td key={column} style={getCellStyle()}>
-                          {formatCellValue(
-                            column,
-                            project[column as keyof Project],
-                            project
-                          )}
-                        </td>
-                      )
-                  )}
-                </tr>
-              ))
+                    {pinnedColumns.pmoId && (
+                      <td
+                        style={{
+                          ...getCellStyle(true, "pmoId", false, index),
+                        }}
+                      >
+                        {project.pmoId}
+                      </td>
+                    )}
+                    {pinnedColumns.order && (
+                      <td
+                        style={{
+                          ...getCellStyle(true, "order", false, index),
+                        }}
+                      >
+                        {project.order}
+                      </td>
+                    )}
+                    {SETTINGS_ORDER.map(
+                      (column) =>
+                        visibleColumns[column] &&
+                        !pinnedColumns[column] && (
+                          <td key={column} style={getCellStyle()}>
+                            <CellContent 
+                              column={column}
+                              value={project[column as keyof Project]}
+                              project={project}
+                            />
+                          </td>
+                        )
+                    )}
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td
-                  colSpan={Object.keys(visibleColumns).length}
+                  colSpan={Object.keys(visibleColumns).length + 1}
                   style={{
                     textAlign: "center",
                     padding: "20px",
@@ -716,10 +651,6 @@ export const SavedProjects = ({
           <MinusCircle size={16} />
           Remove Selected ({selectedProjects.size})
         </button>
-
-        <div style={{ display: "flex", gap: "40px" }}>
-          {/* You can add buttons here if needed */}
-        </div>
 
         <div
           style={{

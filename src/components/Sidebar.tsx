@@ -56,7 +56,7 @@ const Sidebar = ({
     onClick,
     isActive,
   }: {
-    icon: typeof Home;
+    icon: any;
     onClick?: () => void;
     isActive?: boolean;
   }) => (
@@ -81,7 +81,7 @@ const Sidebar = ({
     icon: Icon,
     onClick,
   }: {
-    icon: typeof Home;
+    icon: any;
     onClick?: () => void;
   }) => (
     <button

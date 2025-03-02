@@ -6,7 +6,7 @@ import { Project } from "./types/Project";
 import { Search, Save, AlertTriangle } from "react-feather";
 
 interface NavButton {
-  icon: React.ElementType;
+  icon: any;
   label: string;
   view: string;
   disabled?: boolean;
@@ -18,7 +18,7 @@ const SquareButton = ({
   onClick,
   disabled = false,
 }: {
-  icon: React.ElementType;
+  icon: any;
   label: String;
   onClick: () => void;
   disabled?: boolean;
@@ -47,13 +47,13 @@ const SquareButton = ({
       }}
       onMouseOver={(e) => {
         if (!disabled) {
-          e.currentTarget.style.backgroundColor = "car(--primary-dar)";
+          e.currentTarget.style.backgroundColor = "var(--primary-dark)";
           e.currentTarget.style.transform = "translateY(-5px)";
         }
       }}
       onMouseOut={(e) => {
         if (!disabled) {
-          e.currentTarget.style.backgroundColor = "car(--primary-color)";
+          e.currentTarget.style.backgroundColor = "var(--primary-color)";
           e.currentTarget.style.transform = "translateY(0)";
         }
       }}
