@@ -24,6 +24,22 @@ const formatExcelDate = (excelDate: any): string => {
   }
 };
 
+function hashProjectIdentifiers(pmoId: string, order: string, fallbackIndex: number): number {
+  if (!pmoId && !order) {
+    return fallbackIndex + 1;
+  }
+  
+  const str = `${pmoId}-${order}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  
+  return Math.abs(hash) || (fallbackIndex + 1);
+}
+
 export const parseExcelFile = async (file: File): Promise<Project[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -32,70 +48,85 @@ export const parseExcelFile = async (file: File): Promise<Project[]> => {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
+
+        const sheetName = "Estimating Schedule";
+        if (!workbook.SheetNames.includes(sheetName)) {
+          reject(`Sheet "${sheetName} not found in Excel file.`);
+          return;
+        }
+
         const worksheet = workbook.Sheets[sheetName];
-        
-        // Get all data including headers
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        
-        // Filter out header rows by checking if the row looks like a header
-        const filteredData = jsonData.filter((row: any) => {
-          // Skip rows that contain column headers or are empty
-          return !(
-            row['Construction Milestones'] === 'NTP' || // First header row
-            row['__EMPTY'] === 'Row' || // Second header row
-            !row['__EMPTY_1'] // Empty rows
-          );
+        const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header:1 });
+        if (rawData.length < 4) {
+          reject("Excel file does not contain enough rows.");
+          return;
+        }
+
+        const headers: string[] = rawData[3].slice(1);
+        const jsonData = rawData.slice(4);
+        const formattedData = jsonData.map((row: any[]) => {
+          const rowData: any = {};
+          headers.forEach((header, index) => {
+            rowData[header] = row[index + 1] || '';
+          });
+          return rowData;
         });
 
-        const projects: Project[] = filteredData.map((row: any, index) => ({
-          id: index + 1,
-          costEstimator: row['__EMPTY_1'] || '',
-          costEstimatorRequest: row['__EMPTY_2'] || '',
-          ade: row['__EMPTY_3'] || '',
-          projectManager: row['__EMPTY_4'] || '',
-          projectEngineer: row['__EMPTY_5'] || '',
-          designEstimator: row['__EMPTY_6'] || '',
-          constructionContractor: row['__EMPTY_7'] || '',
-          bundleId: row['__EMPTY_8'] || '',
-          postEstimate: row['__EMPTY_9'] || '',
-          pmoId: row['__EMPTY_10'] || '',
-          order: row['__EMPTY_11'] || '',
-          multipleOrder: row['__EMPTY_12'] || '',
-          mat: row['__EMPTY_13'] || '',
-          projectName: row['__EMPTY_14'] || '',
-          workStream: row['__EMPTY_15'] || '',
-          workType: row['__EMPTY_16'] || '',
-          engrPlanYear: row['__EMPTY_17'] || '',
-          constructionPlanYear: row['__EMPTY_18'] || '',
-          commitmentDate: formatExcelDate(row['__EMPTY_19']),
-          station: row['__EMPTY_20'] || '',
-          line: row['__EMPTY_21'] || '',
-          mp1: row['__EMPTY_22'] || '',
-          mp2: row['__EMPTY_23'] || '',
-          city: row['__EMPTY_24'] || '',
-          county: row['__EMPTY_25'] || '',
-          class5: formatExcelDate(row['Estimating Milestone']),
-          class4: formatExcelDate(row['__EMPTY_27']),
-          class3: formatExcelDate(row['__EMPTY_28']),
-          class2: formatExcelDate(row['__EMPTY_29']),
-          negotiatePrice: formatExcelDate(row['__EMPTY_30']),
-          jeReadyToRoute: formatExcelDate(row['__EMPTY_31']),
-          jeApproved: formatExcelDate(row['__EMPTY_32']),
-          estimateAnalysis: formatExcelDate(row['__EMPTY_33']),
-          // Only keep the percentage-based names
-          thirtyPercentDesignAvailable: formatExcelDate(row['__EMPTY_34']),
-          sixtyPercentDesignReviewMeeting: formatExcelDate(row['__EMPTY_35']),
-          sixtyPercentDesignAvailable: formatExcelDate(row['__EMPTY_36']),
-          ninetyPercentDesignReviewMeeting: formatExcelDate(row['__EMPTY_37']),
-          ninetyPercentDesignAvailable: formatExcelDate(row['__EMPTY_38']),
-          ifc: formatExcelDate(row['__EMPTY_39']),
-          ntp: formatExcelDate(row['Construction Milestones']),
-          mob: formatExcelDate(row['__EMPTY_40']),
-          tieIn: formatExcelDate(row['__EMPTY_41']),
-          enro: formatExcelDate(row['__EMPTY_42']),
-          unitCapture: formatExcelDate(row['__EMPTY_43']),
-        }));
+        const projects: Project[] = formattedData.map((row: any, index) => {
+          const pmoId = row["PMO ID"] || '';
+          const order = row["Order"] || '';
+          const uniqueId = hashProjectIdentifiers(pmoId, order, index);
+
+          return {
+            id: uniqueId,
+            pmoId,
+            order,
+            costEstimator: row["Cost Estimator"] || '',
+            costEstimatorRequest: row["Cost Estimator Requested"] || '',
+            ade: row["ADE"] || '',
+            projectManager: row["Project Manager"] || '',
+            projectEngineer: row["Project Engineer"] || '',
+            designEstimator: row["Design Estimator"] || '',
+            constructionContractor: row["Construction Contractor"] || '',
+            bundleId: row["Bundle ID"] || '',
+            postEstimate: row["Post Estimate"] || '',
+            multipleOrder: row["Multiple Order"] || '',
+            mat: row["MAT"] || '',
+            projectName: row["Project Name"] || '',
+            workStream: row["Work Stream"] || '',
+            workType: row["Work Type"] || '',
+            engrPlanYear: row["Engr Plan Year"] || '',
+            constPlanYear: row["Const Plan Year"] || '',
+            commitmentDate: formatExcelDate(row["Commitment Date"]),
+            station: row["Station"] || '',
+            line: row["Line"] || '',
+            mp1: row["MP1"] || '',
+            mp2: row["MP2"] || '',
+            city: row["City"] || '',
+            county: row["County"] || '',
+            class5: formatExcelDate(row["Class 5"]),
+            class4: formatExcelDate(row["Class 4"]),
+            class3: formatExcelDate(row["Class 3"]),
+            class2: formatExcelDate(row["Class 2"]),
+            negotiatePrice: formatExcelDate(row["Negotiate Price"]),
+            jeReadyToRoute: formatExcelDate(row["JE Ready to Route"]),
+            jeApproved: formatExcelDate(row["JE Approved"]),
+            estimateAnalysis: formatExcelDate(row["Estimate Analysis"]),
+            // Only keep the percentage-based names
+            thirtyPercentDesignReviewMeeting: formatExcelDate(row["30% Design Review Meeting"]),
+            thirtyPercentDesignAvailable: formatExcelDate(row["30% Design Available"]),
+            sixtyPercentDesignReviewMeeting: formatExcelDate(row["60% Design Review Meeting"]),
+            sixtyPercentDesignAvailable: formatExcelDate(row["60% Design Available"]),
+            ninetyPercentDesignReviewMeeting: formatExcelDate(row["90% Design Review Meeting"]),
+            ninetyPercentDesignAvailable: formatExcelDate(row["90% Design Available"]),
+            ifc: formatExcelDate(row["IFC"]),
+            ntp: formatExcelDate(row["NTP"]),
+            mob: formatExcelDate(row["MOB"]),
+            tieIn: formatExcelDate(row["Tie-In"]),
+            edro: formatExcelDate(row["EDRO"]),
+            unitCapture: formatExcelDate(row["Unit Capture"]),
+          };
+        });
 
         resolve(projects);
       } catch (error) {

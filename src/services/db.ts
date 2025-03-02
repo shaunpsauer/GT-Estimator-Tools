@@ -33,10 +33,25 @@ class DatabaseService {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['projects'], 'readwrite');
       const store = transaction.objectStore('projects');
-      const request = store.add(project);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve();
+      
+      // Check if project already exists
+      const getRequest = store.get(project.id);
+      
+      getRequest.onsuccess = () => {
+        if (getRequest.result) {
+          // Project exists, update it
+          const updateRequest = store.put(project);
+          updateRequest.onerror = () => reject(updateRequest.error);
+          updateRequest.onsuccess = () => resolve();
+        } else {
+          // New project, add it
+          const addRequest = store.add(project);
+          addRequest.onerror = () => reject(addRequest.error);
+          addRequest.onsuccess = () => resolve();
+        }
+      };
+      
+      getRequest.onerror = () => reject(getRequest.error);
     });
   }
 

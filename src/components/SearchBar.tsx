@@ -1,90 +1,157 @@
 import { useState } from "react";
 
 interface SearchBarProps {
-  onSearch: (terms: string, isApplied: boolean, isCleared: boolean) => void;
+  value: string;
+  onChange: (value: string) => void;
+  onApplyFilter: (filter: string) => void;
+  onRemoveFilter: (indexToRemove: number) => void;
+  onClearAllFilters: () => void;
+  appliedFilters: string[];
+  placeholder?: string;
+  columnNames?: { [key: string]: string };
 }
 
-export const SearchBar = ({ onSearch }: SearchBarProps) => {
+const SearchBar: React.FC<SearchBarProps> = ({
+  value,
+  onChange,
+  onApplyFilter,
+  onRemoveFilter,
+  onClearAllFilters,
+  appliedFilters,
+  placeholder,
+  columnNames = {}
+}) => {
   const [isFocused, setIsFocused] = useState(false);
-  const [currentSearch, setCurrentSearch] = useState("");
-  const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearch = e.target.value;
-    setCurrentSearch(newSearch);
-    onSearch(newSearch, false, false);
+    setShowTooltip(false);
+    onChange(e.target.value);
   };
 
   const applyCurrentFilter = () => {
-    if (currentSearch.trim()) {
-      const newFilters = [...appliedFilters, currentSearch.trim()];
-      setAppliedFilters(newFilters);
-      onSearch(currentSearch.trim(), true, false);
-      setCurrentSearch("");
+    if (value.trim()) {
+      onApplyFilter(value.trim());
+      onChange("");
     }
   };
 
-  const removeFilter = (indexToRemove: number) => {
-    const newFilters = appliedFilters.filter((_, index) => index !== indexToRemove);
-    setAppliedFilters(newFilters);
-    onSearch(currentSearch, false, false);
-  };
-
-  const clearAllFilters = () => {
-    setAppliedFilters([]);
-    setCurrentSearch("");
-    onSearch("", false, true);
-  };
+  const tooltipExamples = [
+    { column: "PMO ID", value: "12345" },
+    { column: "Cost Est.", value: "John Smith" },
+    { column: "Line", value: "300A" },
+    { column: "PM", value: "Jane Doe" },
+  ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <input
-          type="text"
-          value={currentSearch}
-          placeholder="Search projects..."
-          style={{
-            padding: "10px",
-            width: "300px",
-            fontSize: "var(--font-size-md)",
-            borderRadius: "var(--border-radius-md)",
-            border: isFocused ? `2px solid var(--secondary-color)` : `1px solid var(--border-color)`,
-            boxShadow: `0px 4px 6px var(--shadow-dark)`,
-            outline: "none",
-            transition: "border 0.2s ease-in-out",
-          }}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          onChange={handleSearchChange}
-          onKeyPress={(e) => e.key === "Enter" && applyCurrentFilter()}
-        />
-        <button
-          onClick={applyCurrentFilter}
-          disabled={!currentSearch.trim()}
-          className="button button-primary"
-          style={{
-            padding: "10px 20px",
-            fontSize: "var(--font-size-md)",
-            cursor: currentSearch.trim() ? "pointer" : "not-allowed",
-            opacity: currentSearch.trim() ? 1 : 0.6,
-          }}
-        >
-          Apply Filter
-        </button>
-        {(appliedFilters.length > 0 || currentSearch) && (
-          <button
-            onClick={clearAllFilters}
-            className="button"
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        position: "relative",
+        width: "100%",
+        gap: "15px"
+      }}>
+        <div style={{ 
+          position: "relative", 
+          width: "100%", 
+          maxWidth: "500px"
+        }}>
+          <input
+            type="text"
+            value={value}
+            placeholder={placeholder}
             style={{
-              padding: "10px 20px",
-              fontSize: "var(--font-size-md)",
-              border: `1px solid var(--border-color)`,
+              padding: "8px 12px",
+              width: "100%",
+              fontSize: "14px",
+              borderRadius: "4px",
+              border: isFocused ? `2px solid var(--primary-color)` : `1px solid var(--border-color)`,
+              boxShadow: `0 2px 4px rgba(0,0,0,0.05)`,
+              outline: "none",
+              transition: "all 0.2s ease-in-out",
+              boxSizing: "border-box",
+            }}
+            onFocus={() => {
+              setIsFocused(true);
+              setShowTooltip(true);
+            }}
+            onBlur={() => {
+              setIsFocused(false);
+              setTimeout(() => setShowTooltip(false), 200);
+            }}
+            onChange={handleSearchChange}
+            onKeyPress={(e) => e.key === "Enter" && applyCurrentFilter()}
+          />
+          <div
+            className="search-tooltip"
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
               backgroundColor: "white",
+              border: "1px solid var(--border-color)",
+              borderRadius: "4px",
+              padding: "12px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              zIndex: 1000,
+              width: "280px",
+              display: showTooltip ? "block" : "none",
+              marginTop: "4px",
             }}
           >
-            Clear All
+            <h4 style={{ margin: "0 0 8px 0", fontSize: "14px" }}>Search Tips:</h4>
+            <ul style={{ margin: 0, padding: "0 0 0 16px", fontSize: "12px" }}>
+              <li>Type normally to search across all columns</li>
+              <li>Use "Column: Value" to search specific columns</li>
+              <li>Examples:</li>
+              <ul style={{ padding: "0 0 0 16px" }}>
+                {tooltipExamples.map((example, index) => (
+                  <li key={index}>{`${example.column}: ${example.value}`}</li>
+                ))}
+              </ul>
+              <li style={{ marginTop: "8px", color: "var(--text-secondary)" }}>
+                Available columns: {Object.values(columnNames).join(", ")}
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div style={{ 
+          display: "flex", 
+          gap: "15px", 
+          flexShrink: 0
+        }}>
+          <button
+            onClick={applyCurrentFilter}
+            disabled={!value.trim()}
+            className="button button-primary"
+            style={{
+              padding: "8px 16px",
+              fontSize: "14px",
+              cursor: value.trim() ? "pointer" : "not-allowed",
+              opacity: value.trim() ? 1 : 0.6,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            Apply Filter
           </button>
-        )}
+          {appliedFilters.length > 0 && (
+            <button
+              onClick={onClearAllFilters}
+              className="button"
+              style={{
+                padding: "8px 16px",
+                fontSize: "14px",
+                border: `1px solid var(--border-color)`,
+                backgroundColor: "white",
+                flexShrink: 0,
+              }}
+            >
+              Clear All
+            </button>
+          )}
+        </div>
       </div>
 
       {appliedFilters.length > 0 && (
@@ -104,7 +171,7 @@ export const SearchBar = ({ onSearch }: SearchBarProps) => {
             >
               <span>{filter}</span>
               <button
-                onClick={() => removeFilter(index)}
+                onClick={() => onRemoveFilter(index)}
                 style={{
                   border: "none",
                   background: "none",

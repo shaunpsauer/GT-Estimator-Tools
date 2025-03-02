@@ -1,3 +1,7 @@
+export interface ProjectChanges {
+  [key: string]: string | number | boolean | undefined;
+}
+
 export interface Project {
   id: number;
   costEstimator: string;
@@ -10,9 +14,10 @@ export interface Project {
   projectName: string;
   workStream: string;
   workType: string;
-  engrPlanYear: string;
-  constructionPlanYear: string;
+  engrPlanYear: number;
+  constPlanYear: number;
   commitmentDate: string;
+  thirtyPercentDesignReviewMeeting: string;
   thirtyPercentDesignAvailable: string;
   sixtyPercentDesignReviewMeeting: string;
   sixtyPercentDesignAvailable: string;
@@ -37,7 +42,9 @@ export interface Project {
   county: string;
   last_updated?: string;
   is_changed?: boolean;
-  [key: string]: string | number | boolean | undefined;
+  _changes?: ProjectChanges;
+  dateCategory?: DateCategory;
+  [key: string]: string | number | boolean | undefined | ProjectChanges | undefined;
 }
 
 export interface VisibleColumns {
@@ -62,8 +69,9 @@ export interface VisibleColumns {
   city: boolean;
   county: boolean;
   engrPlanYear: boolean;
-  constructionPlanYear: boolean;
+  constPlanYear: boolean;
   commitmentDate: boolean;
+  thirtyPercentDesignReviewMeeting: boolean;
   thirtyPercentDesignAvailable: boolean;
   sixtyPercentDesignReviewMeeting: boolean;
   sixtyPercentDesignAvailable: boolean;
@@ -85,4 +93,12 @@ export interface VisibleColumns {
   tieIn: boolean;
   enro: boolean;
   unitCapture: boolean;
-} 
+}
+
+export type DateCategory = 
+  | "thisWeek" 
+  | "nextWeek"
+  | "thisMonth" 
+  | "next3Months" 
+  | "future" 
+  | "none"; 
