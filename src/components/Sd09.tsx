@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, ChangeEvent } from "react";
 import { Project, VisibleColumns } from "../types/Project";
-import { PlusCircle, MinusCircle, Upload, Settings, Save } from "react-feather";
 import { ToggleSwitch } from "./ToggleSwitch";
-import { db } from "../services/db";
+import SqlServerApi from "../../server/SqlServerApi";
 import ProjectDetails from "./ProjectDetails";
 import SearchBar from "./SearchBar";
 import { parseExcelFile } from "../services/excelService";
+import * as Icons from "react-feather";
 
 interface Sd09Props {
   projects: Project[];
@@ -98,7 +98,7 @@ export const Sd09 = ({
 
   const loadExistingProjects = async () => {
     try {
-      const existingProjects = await db.getProjects();
+      const existingProjects = await SqlServerApi.getProjects();
       setExistingProjectIds(new Set(existingProjects.map((p) => p.id)));
     } catch (error) {
       console.error("Error loading existing projects:", error);
@@ -278,15 +278,9 @@ export const Sd09 = ({
       (p) => selectedProjects.has(p.id) && !existingProjectIds.has(p.id)
     );
     try {
-      // If your db service supports bulk insert, use it here.
-      if (db.addProject) {
-        for (const project of selectedProjectsList) {
-          await db.addProject(project);
-        }
-      } else {
-        for (const project of selectedProjectsList) {
-          await db.addProject(project);
-        }
+      // Add projects one by one
+      for (const project of selectedProjectsList) {
+        await SqlServerApi.addProject(project);
       }
       // Reload projects from the database
       await loadExistingProjects();
@@ -451,9 +445,9 @@ export const Sd09 = ({
         >
           {pinnedColumns.pmoId ? "Unpin" : "Pin"} PMO ID
           {pinnedColumns.pmoId ? (
-            <MinusCircle size={14} />
+            <Icons.MinusCircle size={14} />
           ) : (
-            <PlusCircle size={14} />
+            <Icons.PlusCircle size={14} />
           )}
         </button>
 
@@ -475,9 +469,9 @@ export const Sd09 = ({
         >
           {pinnedColumns.order ? "Unpin" : "Pin"} Order
           {pinnedColumns.order ? (
-            <MinusCircle size={14} />
+            <Icons.MinusCircle size={14} />
           ) : (
-            <PlusCircle size={14} />
+            <Icons.PlusCircle size={14} />
           )}
         </button>
       </div>
@@ -698,7 +692,7 @@ export const Sd09 = ({
               color: "white",
             }}
           >
-            <Upload size={24} />
+            <Icons.Upload size={24} />
             <span style={{ fontSize: "12px" }}>Upload</span>
           </button>
 
@@ -715,7 +709,7 @@ export const Sd09 = ({
               color: "white",
             }}
           >
-            <Settings size={24} />
+            <Icons.Settings size={24} />
             <span style={{ fontSize: "12px" }}>Settings</span>
           </button>
 
@@ -732,7 +726,7 @@ export const Sd09 = ({
               color: "white",
             }}
           >
-            <Save size={24} />
+            <Icons.Save size={24} />
             <span style={{ fontSize: "12px" }}>Saved</span>
           </button>
         </div>

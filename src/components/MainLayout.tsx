@@ -6,7 +6,7 @@ import { SettingsCard } from "./SettingsCard";
 import { Project, VisibleColumns, ProjectChanges } from "../types/Project";
 import "../styles/global.css";
 import { storageService } from "../services/storageService";
-import { db } from "../services/db";
+import SqlServerApi from "../../server/SqlServerApi";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -98,7 +98,7 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
 
   const loadSavedProjects = async () => {
     try {
-      const projects = await db.getProjects();
+      const projects = await SqlServerApi.getProjects();
       setSavedProjects(projects);
     } catch (error) {
       console.error("Error loading saved projects:", error);
@@ -135,7 +135,7 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
 
   const handleProjectsLoad = async (newProjects: Project[]) => {
     // Load existing saved projects to compare against
-    const existingSaved = await db.getProjects();
+    const existingSaved = await SqlServerApi.getProjects();
 
     // Merge new projects with existing ones, updating when identifiers match
     setProjects((prevProjects) => {
@@ -206,8 +206,8 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
       // Update IndexedDB
       updatedSaved.forEach(async (project) => {
         try {
-          await db.deleteProject(project.id);
-          await db.addProject(project);
+          await SqlServerApi.deleteProject(project.id);
+          await SqlServerApi.addProject(project);
         } catch (error) {
           console.error("Error updating project in DB:", error);
         }

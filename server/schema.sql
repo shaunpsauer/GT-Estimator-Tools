@@ -1,0 +1,67 @@
+-- Projects table
+CREATE TABLE Projects (
+    id INT PRIMARY KEY,
+    costEstimator NVARCHAR(255),
+    costEstimatorRequest NVARCHAR(255),
+    projectManager NVARCHAR(255),
+    projectEngineer NVARCHAR(255),
+    designEstimator NVARCHAR(255),
+    constructionContractor NVARCHAR(255),
+    ade NVARCHAR(255),
+    pmoId NVARCHAR(50),
+    order_number NVARCHAR(50), -- Using order_number as 'order' is a reserved keyword
+    multipleOrder NVARCHAR(50),
+    bundleId NVARCHAR(50),
+    postEstimate NVARCHAR(50),
+    mat NVARCHAR(100),
+    projectName NVARCHAR(255),
+    workStream NVARCHAR(100),
+    workType NVARCHAR(100),
+    engrPlanYear INT,
+    constPlanYear INT,
+    commitmentDate DATETIME2,
+    station NVARCHAR(100),
+    line NVARCHAR(100),
+    mp1 NVARCHAR(100),
+    mp2 NVARCHAR(100),
+    city NVARCHAR(100),
+    county NVARCHAR(100),
+    class5 DATETIME2,
+    class4 DATETIME2,
+    class3 DATETIME2,
+    class2 DATETIME2,
+    negotiatePrice DATETIME2,
+    jeReadyToRoute DATETIME2,
+    jeApproved DATETIME2,
+    estimateAnalysis DATETIME2,
+    thirtyPercentDesignReviewMeeting DATETIME2,
+    thirtyPercentDesignAvailable DATETIME2,
+    sixtyPercentDesignReviewMeeting DATETIME2,
+    sixtyPercentDesignAvailable DATETIME2,
+    ninetyPercentDesignReviewMeeting DATETIME2,
+    ninetyPercentDesignAvailable DATETIME2,
+    ifc DATETIME2,
+    ntp DATETIME2,
+    mob DATETIME2,
+    tieIn DATETIME2,
+    enro DATETIME2,
+    unitCapture DATETIME2,
+    
+    -- Change tracking fields
+    last_updated DATETIME2 DEFAULT GETDATE(),
+    last_updated_by NVARCHAR(100),
+    version INT DEFAULT 1,
+    is_changed BIT DEFAULT 0
+);
+
+-- ProjectChanges table for tracking field-level changes
+CREATE TABLE ProjectChanges (
+    change_id INT IDENTITY(1,1) PRIMARY KEY,
+    project_id INT,
+    field_name NVARCHAR(100),
+    old_value NVARCHAR(MAX),
+    new_value NVARCHAR(MAX),
+    changed_at DATETIME2 DEFAULT GETDATE(),
+    changed_by NVARCHAR(100),
+    FOREIGN KEY (project_id) REFERENCES Projects(id)
+);

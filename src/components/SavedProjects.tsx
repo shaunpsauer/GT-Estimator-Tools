@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+
 import { Project, VisibleColumns } from "../types/Project";
 import { MinusCircle, PlusCircle } from "react-feather";
 import { ToggleSwitch } from "./ToggleSwitch";
-import { db } from "../services/db";
+import SqlServerApi from "../../server/SqlServerApi";
 import ProjectDetails from "./ProjectDetails";
 import SearchBar from "./SearchBar";
 import DateFilterButtons from "./FilterButtons";
+import { useState, useEffect, useMemo, useCallback } from "react";
 
 interface SavedProjectsProps {
   projects: Project[];
@@ -174,7 +175,7 @@ export const SavedProjects = ({
 
   // Load projects from IndexedDB only once on component mount
   useEffect(() => {
-    db.getProjects()
+    SqlServerApi.getProjects()
       .catch(error => console.error("Error loading existing projects:", error));
   }, []);
 
@@ -274,7 +275,7 @@ export const SavedProjects = ({
     // Use Promise.all for better performance with multiple async operations
     await Promise.all(
       selectedProjectsList.map(project => 
-        db.deleteProject(project.id)
+        SqlServerApi.deleteProject(project.id)
           .catch(error => console.error(`Error deleting project ${project.id}:`, error))
       )
     );
