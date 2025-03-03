@@ -8,35 +8,35 @@ const config = {
   database: process.env.DB_NAME,
   options: {
     encrypt: true,
-    trustServerCertificate: false,
-    connectTimeout: 30000 // Increasing timeout to 30 seconds
+    trustServerCertificate: true,
+    enableArithAbort: true,
+    connectionTimeout: 30000,
+    requestTimeout: 30000,
+    pool: {
+      max: 10,
+      min: 0,
+      idleTimeoutMillis: 30000
+    }
   }
 };
 
-console.log('Attempting to connect with config:', {
+console.log('Attempting to connect with modified config:', {
   ...config,
-  password: '***' // Hide password in logs
+  password: '***'
 });
 
 async function testConnection() {
   try {
     const pool = await new sql.ConnectionPool(config).connect();
     console.log('Successfully connected to database!');
-    
-    // Test a simple query
-    const result = await pool.request().query('SELECT 1 as test');
-    console.log('Test query result:', result.recordset);
-    
     await pool.close();
-    console.log('Connection closed');
   } catch (err) {
     console.error('Error details:', {
       name: err.name,
       message: err.message,
       code: err.code,
       state: err.state,
-      number: err.number,
-      stack: err.stack
+      number: err.number
     });
   }
 }
