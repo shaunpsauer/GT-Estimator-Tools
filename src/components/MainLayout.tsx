@@ -6,7 +6,7 @@ import { SettingsCard } from "./SettingsCard";
 import { Project, VisibleColumns, ProjectChanges } from "../types/Project";
 import "../styles/global.css";
 import { storageService } from "../services/storageService";
-import SqlServerApi from "../../server/SqlServerApi";
+import SqlServerApi from "../services/SqlServerApi";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -71,37 +71,81 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
   });
 
   const [projects, setProjects] = useState<Project[]>([]);
-
   const [savedProjects, setSavedProjects] = useState<Project[]>([]);
+  const [isLoadingSavedProjects, setIsLoadingSavedProjects] = useState<boolean>(false);
 
   useEffect(() => {
+    // Load saved projects when component mounts, but only once
     loadSavedProjects();
 
-    // Add event listener for the custom event
+    // Set up event listeners for view changes and project additions
     const handleViewChange = (event: Event) => {
-      const CustomEvent = event as CustomEvent;
-      // button calls
-      switch (CustomEvent.detail) {
-        case "sd09":
-          setCurrentView("sd09");
-          break;
-        case "saved-projects":
-          setCurrentView("saved-projects");
-          break;
-        default:
-          setCurrentView("home");
-      }
+      const customEvent = event as CustomEvent<{view: ViewType}>;
+      setCurrentView(customEvent.detail.view);
+      // Don't reload data here - we'll handle that in a separate effect if needed
+    };
+
+    const handleProjectsAdded = () => {
+      // Force reload saved projects when projects are explicitly added
+      loadSavedProjects(true);
     };
 
     window.addEventListener("changeView", handleViewChange);
+    window.addEventListener("projectsAdded", handleProjectsAdded);
+
+    // Set up an interval to periodically refresh projects (every 5 minutes)
+    const intervalId = setInterval(() => loadSavedProjects(true), 5 * 60 * 1000);
+
+    // Clean up event listeners and interval on component unmount
+    return () => {
+      window.removeEventListener("changeView", handleViewChange);
+      window.removeEventListener("projectsAdded", handleProjectsAdded);
+      clearInterval(intervalId);
+      
+      // Reset loading flag when component unmounts
+      setIsLoadingSavedProjects(false);
+    };
   }, []);
 
-  const loadSavedProjects = async () => {
+  // Separate effect to handle view changes without reloading data unnecessarily
+  useEffect(() => {
+    // We don't need to reload data when switching views
+    // The data is already loaded and stored in state
+    console.log(`View changed to: ${currentView}`);
+  }, [currentView]);
+
+  const loadSavedProjects = async (forceReload = false) => {
     try {
+      // Check if we're already loading or if we have data and don't need to force reload
+      if (isLoadingSavedProjects) {
+        console.log("Already loading saved projects, skipping duplicate call");
+        return;
+      }
+      
+      if (savedProjects.length > 0 && !forceReload) {
+        console.log("Saved projects already loaded, skipping reload");
+        return;
+      }
+      
+      // Set loading flag to prevent duplicate calls
+      setIsLoadingSavedProjects(true);
+      
+      console.log("Loading saved projects from database in MainLayout...");
       const projects = await SqlServerApi.getProjects();
+      console.log(`Loaded ${projects.length} projects from database in MainLayout`);
+      
+      // Update the savedProjects state with the loaded projects
       setSavedProjects(projects);
+      
+      // Reset loading flag
+      setIsLoadingSavedProjects(false);
+      
+      // Do NOT update the projects state with saved projects
+      // This ensures saved projects only appear in SavedProjects and not in Sd09
     } catch (error) {
       console.error("Error loading saved projects:", error);
+      // Reset loading flag even on error
+      setIsLoadingSavedProjects(false);
     }
   };
 
@@ -122,26 +166,40 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
   };
 
   const handleViewSD09 = () => {
+    // Just change the view, don't reload data
     setCurrentView("sd09");
   };
 
   const handleHomeClick = () => {
+    // Just change the view, don't reload data
     setCurrentView("home");
   };
 
   const handleViewSavedProjects = () => {
+    // Just change the view, don't reload data
     setCurrentView("saved-projects");
   };
 
   const handleProjectsLoad = async (newProjects: Project[]) => {
     // Load existing saved projects to compare against
     const existingSaved = await SqlServerApi.getProjects();
+    console.log(`Loaded ${existingSaved.length} existing saved projects for comparison`);
+
+    // Create a set of saved project IDs for quick lookup
+    const savedProjectIds = new Set(existingSaved.map(p => p.id));
+    
+    // Filter out projects that are already saved from the new projects
+    // This ensures saved projects don't appear in the Sd09 view
+    const filteredNewProjects = newProjects.filter(p => !savedProjectIds.has(p.id));
+    console.log(`Filtered out ${newProjects.length - filteredNewProjects.length} already saved projects`);
 
     // Merge new projects with existing ones, updating when identifiers match
     setProjects((prevProjects) => {
-      const mergedProjects = [...prevProjects];
+      // Start with previous projects that are not saved
+      const nonSavedPrevProjects = prevProjects.filter(p => !savedProjectIds.has(p.id));
+      const mergedProjects = [...nonSavedPrevProjects];
 
-      newProjects.forEach((newProject) => {
+      filteredNewProjects.forEach((newProject) => {
         const existingIndex = mergedProjects.findIndex(
           (p) => p.id === newProject.id
         );
@@ -203,20 +261,25 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
         return savedProject;
       });
 
-      // Update IndexedDB
-      updatedSaved.forEach(async (project) => {
+      // Update projects in database sequentially to avoid race conditions
+      (async () => {
         try {
-          await SqlServerApi.deleteProject(project.id);
-          await SqlServerApi.addProject(project);
+          // Process projects one by one to avoid race conditions
+          for (const project of updatedSaved) {
+            await SqlServerApi.deleteProject(project.id);
+            // Add a small delay to ensure deletion completes
+            await new Promise(resolve => setTimeout(resolve, 100));
+            await SqlServerApi.addProject(project);
+          }
         } catch (error) {
-          console.error("Error updating project in DB:", error);
+          console.error("Error updating projects in DB:", error);
         }
-      });
+      })();
 
       return updatedSaved;
     });
 
-    onProjectsLoad?.(newProjects);
+    onProjectsLoad?.(filteredNewProjects);
   };
 
   return (
@@ -282,7 +345,6 @@ const MainLayout = ({ children, onProjectsLoad }: MainLayoutProps) => {
               onSettingsClick={handleSettingsClick}
               onViewSavedProjects={handleViewSavedProjects}
               onProjectsLoad={handleProjectsLoad}
-              onViewSD09={handleViewSD09}
             />
           ) : (
             <SavedProjects

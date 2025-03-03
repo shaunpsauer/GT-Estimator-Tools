@@ -68,7 +68,10 @@ function App() {
   const [, setProjects] = useState<Project[]>([]);
 
   const handleProjectsLoad = (newProjects: Project[]) => {
+    // Only update the projects state with non-saved projects
+    // This ensures saved projects don't appear in the Sd09 view
     setProjects(newProjects);
+    console.log(`App received ${newProjects.length} projects`);
   };
 
   const navButtons: NavButton[] = [
@@ -95,7 +98,7 @@ function App() {
   ];
 
   const handleNavagation = (view: string) => {
-    const event = new CustomEvent("changeView", { detail: view });
+    const event = new CustomEvent("changeView", { detail: { view } });
     window.dispatchEvent(event);
   };
 

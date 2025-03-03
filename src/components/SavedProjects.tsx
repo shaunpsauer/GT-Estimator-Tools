@@ -1,8 +1,7 @@
-
 import { Project, VisibleColumns } from "../types/Project";
 import { MinusCircle, PlusCircle } from "react-feather";
 import { ToggleSwitch } from "./ToggleSwitch";
-import SqlServerApi from "../../server/SqlServerApi";
+import SqlServerApi from "../services/SqlServerApi";
 import ProjectDetails from "./ProjectDetails";
 import SearchBar from "./SearchBar";
 import DateFilterButtons from "./FilterButtons";
@@ -173,11 +172,17 @@ export const SavedProjects = ({
   const [dateFilteredProjects, setDateFilteredProjects] = useState<Project[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
 
-  // Load projects from IndexedDB only once on component mount
+  // Load projects from database when component mounts
   useEffect(() => {
-    SqlServerApi.getProjects()
-      .catch(error => console.error("Error loading existing projects:", error));
-  }, []);
+    // No need to load projects from the server since they're passed as props
+    console.log(`SavedProjects: Using ${projects.length} projects passed from props`);
+    
+    // No need for any data loading here since all data is passed as props
+    
+    return () => {
+      // No cleanup needed
+    };
+  }, [projects.length]);
 
   // Memoize the parsing of search terms for better performance
   const parseSearchTerm = useCallback((searchTerm: string) => {
@@ -632,26 +637,28 @@ export const SavedProjects = ({
           borderRadius: "0 0 5px 5px",
         }}
       >
-        <button
-          onClick={handleRemoveProjects}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "white",
-            color: "var(--primary-color)",
-            border: "none",
-            borderRadius: "0",
-            cursor: selectedProjects.size > 0 ? "pointer" : "not-allowed",
-            opacity: selectedProjects.size > 0 ? 1 : 0.6,
-            fontWeight: "bold",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-          disabled={selectedProjects.size === 0}
-        >
-          <MinusCircle size={16} />
-          Remove Selected ({selectedProjects.size})
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            onClick={handleRemoveProjects}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "white",
+              color: "var(--primary-color)",
+              border: "none",
+              borderRadius: "0",
+              cursor: selectedProjects.size > 0 ? "pointer" : "not-allowed",
+              opacity: selectedProjects.size > 0 ? 1 : 0.6,
+              fontWeight: "bold",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+            disabled={selectedProjects.size === 0}
+          >
+            <MinusCircle size={16} />
+            Remove Selected ({selectedProjects.size})
+          </button>
+        </div>
 
         <div
           style={{
