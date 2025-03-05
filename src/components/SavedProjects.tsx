@@ -156,6 +156,17 @@ const formatColumnName = (column: string): string => {
     column.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
 };
 
+// Helper function to format dates
+const formatDate = (value: string): string => {
+  const datePattern = /^(\d{2})-(\d{2})-(\d{2})$/;
+  const match = value.match(datePattern);
+  if (match) {
+    const [_, day, month, year] = match;
+    return `${month}/${day}/${year}`;
+  }
+  return value;
+};
+
 export const SavedProjects = ({
   projects,
   visibleColumns,
@@ -352,13 +363,17 @@ export const SavedProjects = ({
     const hasChanged = project._changes && column in project._changes;
     const isDateColumn = DATE_COLUMNS.includes(column);
     
+    // Special handling for order column
+    let displayValue = value;
+    if (column === 'order') {
+      displayValue = project.order_number;
+    }
+    
     const cellContent = 
-      isDateColumn && value
-        ? typeof value === "string" && value.includes("/")
-          ? value
-          : value
-        : value !== undefined
-        ? String(value)
+      isDateColumn && displayValue
+        ? formatDate(String(displayValue))
+        : displayValue !== undefined
+        ? String(displayValue)
         : "N/A";
 
     if (hasChanged) {
@@ -588,7 +603,7 @@ export const SavedProjects = ({
                           ...getCellStyle(true, "order", false, index),
                         }}
                       >
-                        {project.order}
+                        {project.order_number}
                       </td>
                     )}
                     {SETTINGS_ORDER.map(

@@ -26,10 +26,11 @@ const settingsOrder: (keyof VisibleColumns)[] = [
   "workStream", "workType", "engrPlanYear", "constPlanYear", "commitmentDate",
   "station", "line", "mp1", "mp2", "city", "county", "class5", "class4",
   "class3", "class2", "negotiatePrice", "jeReadyToRoute", "jeApproved",
-  "estimateAnalysis", "thirtyPercentDesignAvailable",
-  "sixtyPercentDesignReviewMeeting", "sixtyPercentDesignAvailable",
-  "ninetyPercentDesignReviewMeeting", "ninetyPercentDesignAvailable", "ifc",
-  "ntp", "mob", "tieIn", "enro", "unitCapture"
+  "estimateAnalysis", "thirtyPercentDesignReviewMeeting",
+  "thirtyPercentDesignAvailable", "sixtyPercentDesignReviewMeeting",
+  "sixtyPercentDesignAvailable", "ninetyPercentDesignReviewMeeting",
+  "ninetyPercentDesignAvailable", "ifc", "ntp", "mob", "tieIn", "enro",
+  "unitCapture"
 ];
 
 const formatLabel = (key: string) => {

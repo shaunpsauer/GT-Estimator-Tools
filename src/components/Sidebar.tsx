@@ -3,7 +3,6 @@ import {
   Home,
   Settings,
   Upload,
-  RefreshCw,
   Search,
   List,
   Save,
@@ -11,6 +10,7 @@ import {
 import { parseExcelFile } from "../services/excelService";
 import { Project } from "../types/Project";
 import React from "react";
+import { Tooltip } from "@mui/material";
 
 interface SidebarProps {
   onSettingsClick?: () => void;
@@ -45,60 +45,62 @@ const Sidebar = ({
     }
   };
 
-  const handleRefresh = async () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
   const SidebarButton = ({
     icon: Icon,
     onClick,
     isActive,
+    tooltip,
   }: {
     icon: any;
     onClick?: () => void;
     isActive?: boolean;
+    tooltip: string;
   }) => (
-    <button
-      onClick={onClick}
-      className="button sidebar-button"
-      style={{
-        width: "100%",
-        padding: "var(--spacing-sm) var(--spacing-md)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "var(--spacing-md)",
-        backgroundColor: isActive ? "var(--primary-dark)" : "transparent",
-      }}
-    >
-      <Icon size={30} />
-    </button>
+    <Tooltip title={tooltip} placement="right">
+      <button
+        onClick={onClick}
+        className="button sidebar-button"
+        style={{
+          width: "100%",
+          padding: "var(--spacing-sm) var(--spacing-md)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "var(--spacing-md)",
+          backgroundColor: isActive ? "var(--primary-dark)" : "transparent",
+        }}
+      >
+        <Icon size={30} />
+      </button>
+    </Tooltip>
   );
 
   const SubMenuItem = ({
     icon: Icon,
     onClick,
+    tooltip,
   }: {
     icon: any;
     onClick?: () => void;
+    tooltip: string;
   }) => (
-    <button
-      onClick={onClick}
-      className="button sidebar-button"
-      style={{
-        width: "100%",
-        padding: "var(--spacing-sm) var(--spacing-md)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "var(--spacing-md)",
-        fontSize: "var(--font-size-sm)",
-      }}
-    >
-      <Icon size={20} />
-    </button>
+    <Tooltip title={tooltip} placement="right">
+      <button
+        onClick={onClick}
+        className="button sidebar-button"
+        style={{
+          width: "100%",
+          padding: "var(--spacing-sm) var(--spacing-md)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "var(--spacing-md)",
+          fontSize: "var(--font-size-sm)",
+        }}
+      >
+        <Icon size={20} />
+      </button>
+    </Tooltip>
   );
 
   return (
@@ -123,6 +125,7 @@ const Sidebar = ({
         icon={Home}
         onClick={onHomeClick}
         isActive={currentView === "home"}
+        tooltip="Home"
       />
 
       <div style={{ width: "100%" }}>
@@ -134,6 +137,7 @@ const Sidebar = ({
             currentView === "saved-projects"
           }
           onClick={() => setIsSubmenuOpen(!isSubmenuOpen)}
+          tooltip="SD-09"
         />
 
         {isSubmenuOpen && (
@@ -141,10 +145,12 @@ const Sidebar = ({
             <SubMenuItem
               icon={Save}
               onClick={onViewSavedProjects}
+              tooltip="Saved Projects"
             />
             <SubMenuItem 
               icon={List} 
-              onClick={onViewSD09} 
+              onClick={onViewSD09}
+              tooltip="SD-09 Viewer"
             />
             <input
               ref={fileInputRef}
@@ -156,14 +162,12 @@ const Sidebar = ({
             <SubMenuItem
               icon={Upload}
               onClick={() => fileInputRef.current?.click()}
-            />
-            <SubMenuItem
-              icon={RefreshCw}
-              onClick={handleRefresh}
+              tooltip="Upload SD-09"
             />
             <SubMenuItem
               icon={Settings}
               onClick={onSettingsClick}
+              tooltip="Settings"
             />
           </div>
         )}

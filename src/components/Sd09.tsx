@@ -19,6 +19,15 @@ interface Sd09Props {
   onProjectsLoad?: (projects: Project[]) => void;
 }
 
+// Convert Excel date serial number to MM/DD/YY format
+const convertExcelDate = (serialNumber: number): string => {
+  const date = new Date((serialNumber - 25569) * 86400 * 1000);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  return `${month}/${day}/${year}`;
+};
+
 export const Sd09 = ({
   projects,
   visibleColumns,
@@ -33,7 +42,7 @@ export const Sd09 = ({
   const [expandedProject, setExpandedProject] = useState<Project | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
-  const [pinnedColumns] = useState<{ [key: string]: boolean }>({
+  const [pinnedColumns, setPinnedColumns] = useState<{ [key: string]: boolean }>({
     pmoId: false,
     order: false,
   });
@@ -56,53 +65,27 @@ export const Sd09 = ({
   const [isLoadingLatestUpload, setIsLoadingLatestUpload] = useState<boolean>(false);
   const [isLoadingExcelProjects, setIsLoadingExcelProjects] = useState<boolean>(false);
 
-  // Order for displaying columns
+  // Add toggle pinned column function
+  const togglePinnedColumn = useCallback((column: string) => {
+    setPinnedColumns(prev => ({
+      ...prev,
+      [column]: !prev[column],
+    }));
+  }, []);
+
+  // Update the settings order to move PMO ID and Order after Post Estimate
   const settingsOrder: (keyof VisibleColumns)[] = [
-    "costEstimator",
-    "costEstimatorRequest",
-    "ade",
-    "projectManager",
-    "projectEngineer",
-    "designEstimator",
-    "constructionContractor",
-    "bundleId",
-    "postEstimate",
-    "pmoId",
-    "order",
-    "multipleOrder",
-    "mat",
-    "projectName",
-    "workStream",
-    "workType",
-    "engrPlanYear",
-    "constPlanYear",
-    "commitmentDate",
-    "station",
-    "line",
-    "mp1",
-    "mp2",
-    "city",
-    "county",
-    "class5",
-    "class4",
-    "class3",
-    "class2",
-    "negotiatePrice",
-    "jeReadyToRoute",
-    "jeApproved",
-    "estimateAnalysis",
-    "thirtyPercentDesignReviewMeeting",
-    "thirtyPercentDesignAvailable",
-    "sixtyPercentDesignReviewMeeting",
-    "sixtyPercentDesignAvailable",
-    "ninetyPercentDesignReviewMeeting",
-    "ninetyPercentDesignAvailable",
-    "ifc",
-    "ntp",
-    "mob",
-    "tieIn",
-    "enro",
-    "unitCapture",
+    "costEstimator", "costEstimatorRequest", "ade", "projectManager",
+    "projectEngineer", "designEstimator", "constructionContractor", "bundleId",
+    "postEstimate", "pmoId", "order", "multipleOrder", "mat", "projectName",
+    "workStream", "workType", "engrPlanYear", "constPlanYear", "commitmentDate",
+    "station", "line", "mp1", "mp2", "city", "county", "class5", "class4",
+    "class3", "class2", "negotiatePrice", "jeReadyToRoute", "jeApproved",
+    "estimateAnalysis", "thirtyPercentDesignReviewMeeting",
+    "thirtyPercentDesignAvailable", "sixtyPercentDesignReviewMeeting",
+    "sixtyPercentDesignAvailable", "ninetyPercentDesignReviewMeeting",
+    "ninetyPercentDesignAvailable", "ifc", "ntp", "mob", "tieIn", "enro",
+    "unitCapture"
   ];
 
   // Load existing projects and latest upload on mount
@@ -111,7 +94,7 @@ export const Sd09 = ({
     if (!dataLoadedRef.current) {
       console.log("Initial data load for Sd09");
       
-      // Check if we already have projects passed from props
+      // Check if already have projects passed from props
       if (projects && projects.length > 0) {
         console.log(`Using ${projects.length} projects passed from props`);
         // Extract project IDs from the passed projects
@@ -156,111 +139,56 @@ export const Sd09 = ({
   }, [projects]);
 
   const loadExistingProjects = async () => {
+    if (isLoadingExistingProjects || existingProjectIds.size > 0) return;
+    
+    setIsLoadingExistingProjects(true);
     try {
-      // Check if we're already loading
-      if (isLoadingExistingProjects) {
-        console.log("Already loading existing project IDs, skipping duplicate call");
-        return;
-      }
-      
-      // Check if we already have existing project IDs
-      if (existingProjectIds.size > 0) {
-        console.log(`Already tracking ${existingProjectIds.size} existing project IDs, skipping reload`);
-        return;
-      }
-      
-      // Set loading flag
-      setIsLoadingExistingProjects(true);
-      
-      // Only load the IDs of existing projects to track what's already saved
-      // This ensures saved projects don't appear in the Sd09 view
       const existingProjects = await SqlServerApi.getProjects();
-      console.log(`Loaded ${existingProjects.length} existing project IDs for tracking`);
       setExistingProjectIds(new Set(existingProjects.map((p) => p.id)));
-      
-      // Reset loading flag
-      setIsLoadingExistingProjects(false);
     } catch (error) {
-      console.error("Error loading existing project IDs:", error);
-      // Set to empty set to avoid undefined errors
       setExistingProjectIds(new Set());
-      // Reset loading flag
+    } finally {
       setIsLoadingExistingProjects(false);
     }
   };
 
   const loadLatestUpload = async () => {
+    if (isLoadingLatestUpload || latestUpload) return;
+    
+    setIsLoadingLatestUpload(true);
     try {
-      // Check if we're already loading
-      if (isLoadingLatestUpload) {
-        console.log("Already loading latest upload, skipping duplicate call");
-        return;
-      }
-      
-      // Check if we already have the latest upload
-      if (latestUpload) {
-        console.log("Latest upload already loaded, skipping reload");
-        return;
-      }
-      
-      // Set loading flag
-      setIsLoadingLatestUpload(true);
-      
       const upload = await SqlServerApi.getLatestUpload();
-      console.log("Latest upload:", upload);
       setLatestUpload(upload);
-      
-      // Reset loading flag
-      setIsLoadingLatestUpload(false);
     } catch (error) {
-      console.error("Error loading latest upload:", error);
       setLatestUpload(null);
-      // Reset loading flag
+    } finally {
       setIsLoadingLatestUpload(false);
     }
   };
 
   const loadExcelProjects = async (page: number = currentPage) => {
+    if (isLoadingExcelProjects) return;
+    
+    setIsLoadingExcelProjects(true);
+    setIsLoadingMore(true);
+    
     try {
-      // Check if we're already loading
-      if (isLoadingExcelProjects) {
-        console.log("Already loading Excel projects, skipping duplicate call");
-        return;
-      }
-      
-      // Set loading flag
-      setIsLoadingExcelProjects(true);
-      setIsLoadingMore(true);
-      
-      console.log(`Loading projects from latest Excel upload (page ${page})...`);
       const result = await SqlServerApi.getExcelProjects(page, pageSize);
-      console.log(`Loaded ${result.projects.length} projects from latest Excel upload (total: ${result.total})`);
-      
-      // Filter out projects that are already saved
       const filteredProjects = result.projects.filter(p => !existingProjectIds.has(p.id));
-      console.log(`Filtered to ${filteredProjects.length} projects (excluding saved projects)`);
       
-      // Update the projects in the parent component
       if (page === 1) {
-        // First page - replace existing projects
         onProjectsLoad?.(filteredProjects);
       } else {
-        // Subsequent pages - append to existing projects
         const existingProjects = [...filteredProjects];
         onProjectsLoad?.(existingProjects);
       }
 
-      // Update pagination state
       setCurrentPage(page);
       setTotalProjects(result.total);
       setHasMoreProjects(page * pageSize < result.total);
-      
-      // Reset loading flags
-      setIsLoadingExcelProjects(false);
-      setIsLoadingMore(false);
     } catch (error) {
-      console.error("Error loading Excel projects:", error);
-      // Reset loading flags
+      // Handle error silently
+    } finally {
       setIsLoadingExcelProjects(false);
       setIsLoadingMore(false);
     }
@@ -655,65 +583,125 @@ export const Sd09 = ({
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
           
-          // Convert to JSON
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          // Convert to JSON with header row option and raw values
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+            range: 3,  // Start from row 4 (0-based index)
+            raw: true, // Get raw values for proper date handling
+            defval: '', // Set default value for empty cells
+            header: 1  // Use 1-based array of values instead of objects
+          }) as any[][];  // Type assertion for the array
           console.log(`Converted Excel to JSON: ${jsonData.length} rows`);
           
-          setUploadProgress(40);
+          // Get headers from the first row and clean them
+          const headers = jsonData[0].map((header: string) => String(header).trim());
+          console.log('Excel headers:', headers);
           
-          // Map the Excel data to our Project type
-          const mappedProjects = jsonData.map((row: any, index) => {
-            // Create a unique ID if none exists
-            const id = row.id || row.ID || row.Id || index + 1;
+          // Map the Excel data to our Project type (skip the header row)
+          const mappedProjects = jsonData.slice(1).map((row: any[], index) => {
+            // Create a map of column values using headers
+            const rowData: { [key: string]: any } = {};
+            headers.forEach((header, i) => {
+              if (header) {  // Only map non-empty headers
+                rowData[header] = row[i];
+              }
+            });
             
-            return {
-              id: Number(id),
-              costEstimator: row.costEstimator || row["Cost Estimator"] || "",
-              costEstimatorRequest: row.costEstimatorRequest || row["Cost Estimator Request"] || "",
-              ade: row.ade || row.ADE || "",
-              projectManager: row.projectManager || row["Project Manager"] || row.PM || "",
-              projectEngineer: row.projectEngineer || row["Project Engineer"] || "",
-              designEstimator: row.designEstimator || row["Design Estimator"] || "",
-              constructionContractor: row.constructionContractor || row["Construction Contractor"] || "",
-              bundleId: row.bundleId || row["Bundle ID"] || "",
-              postEstimate: row.postEstimate || row["Post Estimate"] || "",
-              pmoId: row.pmoId || row["PMO ID"] || "",
-              order: row.order || row.Order || row.order_number || row["Order Number"] || "",
-              multipleOrder: row.multipleOrder || row["Multiple Order"] || "",
-              mat: row.mat || row.MAT || "",
-              projectName: row.projectName || row["Project Name"] || "",
-              workStream: row.workStream || row["Work Stream"] || "",
-              workType: row.workType || row["Work Type"] || "",
-              engrPlanYear: row.engrPlanYear || row["Engineering Plan Year"] || "",
-              constPlanYear: row.constPlanYear || row["Construction Plan Year"] || "",
-              commitmentDate: row.commitmentDate || row["Commitment Date"] || "",
-              station: row.station || row.Station || "",
-              line: row.line || row.Line || "",
-              mp1: row.mp1 || row.MP1 || "",
-              mp2: row.mp2 || row.MP2 || "",
-              city: row.city || row.City || "",
-              county: row.county || row.County || "",
-              class5: row.class5 || row["CLASS 5"] || "",
-              class4: row.class4 || row["CLASS 4"] || "",
-              class3: row.class3 || row["CLASS 3"] || "",
-              class2: row.class2 || row["CLASS 2"] || "",
-              negotiatePrice: row.negotiatePrice || row["Negotiate Price"] || "",
-              jeReadyToRoute: row.jeReadyToRoute || row["JE Ready to Route"] || "",
-              jeApproved: row.jeApproved || row["JE Approved"] || "",
-              estimateAnalysis: row.estimateAnalysis || row["Estimate Analysis"] || "",
-              thirtyPercentDesignReviewMeeting: row.thirtyPercentDesignReviewMeeting || row["30% Design Review Meeting"] || "",
-              thirtyPercentDesignAvailable: row.thirtyPercentDesignAvailable || row["30% Design Available"] || "",
-              sixtyPercentDesignReviewMeeting: row.sixtyPercentDesignReviewMeeting || row["60% Design Review Meeting"] || "",
-              sixtyPercentDesignAvailable: row.sixtyPercentDesignAvailable || row["60% Design Available"] || "",
-              ninetyPercentDesignReviewMeeting: row.ninetyPercentDesignReviewMeeting || row["90% Design Review Meeting"] || "",
-              ninetyPercentDesignAvailable: row.ninetyPercentDesignAvailable || row["90% Design Available"] || "",
-              ifc: row.ifc || row.IFC || "",
-              ntp: row.ntp || row.NTP || "",
-              mob: row.mob || row.MOB || "",
-              tieIn: row.tieIn || row["Tie-In"] || "",
-              enro: row.enro || row.ENRO || "",
-              unitCapture: row.unitCapture || row["Unit Capture"] || "",
+            // Log the PMO ID and Order values with more detail
+            const pmoId = rowData['PMO ID'];
+            const order = rowData['Order'];
+            console.log(`Row ${index + 1} Data:`, {
+              pmoId,
+              order,
+              rawPmoId: row[headers.indexOf('PMO ID')],
+              rawOrder: row[headers.indexOf('Order')],
+              headerIndexes: {
+                pmoId: headers.indexOf('PMO ID'),
+                order: headers.indexOf('Order')
+              }
+            });
+            
+            // Use the Row column as ID, fallback to index + 1
+            const id = rowData['Row'] || index + 1;
+            
+            // Helper function to convert dates
+            const convertDate = (value: any) => {
+              if (!value) return '';
+              if (typeof value === 'number') {
+                return convertExcelDate(value);
+              }
+              // If it's already a string in DD-MM-YY format, convert to MM/DD/YY
+              const datePattern = /^(\d{2})-(\d{2})-(\d{2})$/;
+              const match = String(value).match(datePattern);
+              if (match) {
+                const [_, day, month, year] = match;
+                return `${month}/${day}/${year}`;
+              }
+              return value;
             };
+
+            // Helper function to ensure string values
+            const ensureString = (value: any) => {
+              if (value === undefined || value === null) return '';
+              return String(value).trim();
+            };
+
+            // Helper function to ensure number values
+            const ensureNumber = (value: any) => {
+              if (value === undefined || value === null) return 0;
+              const num = Number(value);
+              return isNaN(num) ? 0 : num;
+            };
+            
+            const project: Project = {
+              id: Number(id),
+              costEstimator: ensureString(rowData['Cost Estimator']),
+              costEstimatorRequest: ensureString(rowData['Cost Estimator Request']),
+              ade: ensureString(rowData['ADE']),
+              projectManager: ensureString(rowData['Project Manager']),
+              projectEngineer: ensureString(rowData['Project Engineer']),
+              designEstimator: ensureString(rowData['Design Estimator']),
+              constructionContractor: ensureString(rowData['Construction Contractor']),
+              bundleId: ensureString(rowData['Bundle ID']),
+              postEstimate: ensureString(rowData['Post Estimate']),
+              pmoId: ensureString(rowData['PMO ID']),
+              order: ensureString(rowData['Order']),
+              multipleOrder: ensureString(rowData['Multiple Order']),
+              mat: ensureString(rowData['MAT']),
+              projectName: ensureString(rowData['Project Name']),
+              workStream: ensureString(rowData['Work Stream']),
+              workType: ensureString(rowData['Work Type']),
+              engrPlanYear: ensureNumber(rowData['Engr Plan Year']),
+              constPlanYear: ensureNumber(rowData['Const Plan Year']),
+              commitmentDate: convertDate(rowData['Commitment Date']),
+              station: ensureString(rowData['Station']),
+              line: ensureString(rowData['Line']),
+              mp1: ensureString(rowData['MP1']),
+              mp2: ensureString(rowData['MP2']),
+              city: ensureString(rowData['City']),
+              county: ensureString(rowData['County']),
+              class5: convertDate(rowData['Class 5']),
+              class4: convertDate(rowData['Class 4']),
+              class3: convertDate(rowData['Class 3']),
+              class2: convertDate(rowData['Class 2']),
+              negotiatePrice: convertDate(rowData['Negotiate Price']),
+              jeReadyToRoute: convertDate(rowData['JE Ready to Route']),
+              jeApproved: convertDate(rowData['JE Approved']),
+              estimateAnalysis: convertDate(rowData['Estimate Analysis']),
+              thirtyPercentDesignReviewMeeting: convertDate(rowData['30% Design Review Meeting']),
+              thirtyPercentDesignAvailable: convertDate(rowData['30% Design Available']),
+              sixtyPercentDesignReviewMeeting: convertDate(rowData['60% Design Review Meeting']),
+              sixtyPercentDesignAvailable: convertDate(rowData['60% Design Available']),
+              ninetyPercentDesignReviewMeeting: convertDate(rowData['90% Design Review Meeting']),
+              ninetyPercentDesignAvailable: convertDate(rowData['90% Design Available']),
+              ifc: convertDate(rowData['IFC']),
+              ntp: convertDate(rowData['NTP']),
+              mob: convertDate(rowData['MOB']),
+              tieIn: convertDate(rowData['Tie-In']),
+              enro: convertDate(rowData['ENRO']),
+              unitCapture: convertDate(rowData['Unit Capture'])
+            };
+            
+            return project;
           });
           
           console.log(`Mapped ${mappedProjects.length} projects from Excel data`);
@@ -961,6 +949,35 @@ export const Sd09 = ({
           placeholder="Search schedule items..."
           columnNames={formattedLabels}
         />
+      </div>
+
+      <div style={{ marginBottom: "10px", display: "flex", gap: "10px" }}>
+        {["pmoId", "order"].map(column => (
+          <button
+            key={column}
+            onClick={() => togglePinnedColumn(column)}
+            style={{
+              padding: "4px 8px",
+              backgroundColor: pinnedColumns[column]
+                ? "var(--primary-color)"
+                : "#f8f9fa",
+              color: pinnedColumns[column] ? "white" : "black",
+              border: "1px solid var(--border-color)",
+              borderRadius: "4px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            {pinnedColumns[column] ? "Unpin" : "Pin"} {column === "pmoId" ? "PMO ID" : "Order"}
+            {pinnedColumns[column] ? (
+              <Icons.MinusCircle size={14} />
+            ) : (
+              <Icons.PlusCircle size={14} />
+            )}
+          </button>
+        ))}
       </div>
 
       <div className="content-area">

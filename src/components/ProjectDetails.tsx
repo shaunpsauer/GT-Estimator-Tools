@@ -1,15 +1,96 @@
 import { Dialog, DialogContent, Typography, Button, Box, Divider, TextField, Tab, Tabs } from "@mui/material";
-import { X, Clock } from "react-feather";
-import { Project } from "../types/Project";
+import { X, Clock, AlertTriangle } from "react-feather";
+import { Project, ProjectChanges } from "../types/Project";
 import { useState, useEffect, useCallback } from "react";
 import SqlServerApi, { ExcelProjectChange } from "../services/SqlServerApi";
+import React from 'react';
 
 interface ProjectDetailsProps {
   project: Project;
   onClose: () => void;
 }
 
-const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
+interface Field {
+  key: keyof Omit<Project, '_changes' | 'dateCategory' | 'order_number'>;
+  label: string;
+}
+
+interface Section {
+  title: string;
+  fields: Field[];
+}
+
+// Type guard to check if a value is a ProjectChanges object
+const isProjectChanges = (value: unknown): value is ProjectChanges => {
+  return typeof value === 'object' && value !== null && '_changes' in value;
+};
+
+// Helper function to safely convert any value to a string
+const formatValue = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  
+  // Handle ProjectChanges type
+  if (isProjectChanges(value)) {
+    return ''; // Skip _changes field
+  }
+  
+  // Convert the value to string
+  const stringValue = String(value);
+  
+  // Check if it's a date field (matches DD-MM-YY pattern)
+  const datePattern = /^(\d{2})-(\d{2})-(\d{2})$/;
+  const match = stringValue.match(datePattern);
+  
+  if (match) {
+    const [_, day, month, year] = match;
+    return `${month}/${day}/${year}`;
+  }
+  
+  return stringValue;
+};
+
+// Helper function to create title text
+const createTitleText = (pmoId: string, order: string, prefix: string): string => {
+  return `${prefix}${String(pmoId)} - ${String(order)}`;
+};
+
+// Helper function to format field names for display
+const formatFieldName = (fieldName: string): string => {
+  // Handle special cases first
+  if (fieldName === 'pmoId') return 'PMO ID';
+  if (fieldName === 'mp1') return 'MP1';
+  if (fieldName === 'mp2') return 'MP2';
+  if (fieldName === 'ifc') return 'IFC';
+  if (fieldName === 'ntp') return 'NTP';
+  if (fieldName === 'mob') return 'MOB';
+  if (fieldName === 'ade') return 'ADE';
+  if (fieldName === 'jeApproved') return 'JE Approved';
+  if (fieldName === 'jeReadyToRoute') return 'JE Ready to Route';
+  if (fieldName === 'enro') return 'ENRO';
+  
+  // For other cases, split by camelCase and capitalize each word
+  return fieldName
+    .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+    .replace(/([0-9]+)/g, ' $1') // Add space before numbers
+    .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+    .trim();
+};
+
+// Helper function to format dates from DD-MM-YY to MM/DD/YY
+const formatDate = (value: string): string => {
+  // Check if the value matches the DD-MM-YY pattern
+  const datePattern = /^(\d{2})-(\d{2})-(\d{2})$/;
+  const match = value.match(datePattern);
+  
+  if (match) {
+    const [_, day, month, year] = match;
+    return `${month}/${day}/${year}`;
+  }
+  
+  return value;
+};
+
+const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onClose }) => {
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState('');
   const [activeTab, setActiveTab] = useState(0);
@@ -67,10 +148,8 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
 
   // Load project changes when the component mounts or when the project changes
   useEffect(() => {
-    if (activeTab === 1) {
-      loadProjectChanges();
-    }
-  }, [activeTab, loadProjectChanges]);
+    loadProjectChanges();
+  }, [loadProjectChanges]);
 
   // Save notes to localStorage whenever they change
   const handleNotesChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -102,7 +181,7 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
     }
   };
 
-  const sections = [
+  const sections: Section[] = [
     {
       title: "Project Information",
       fields: [
@@ -114,6 +193,9 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
         { key: "mat", label: "MAT" },
         { key: "workStream", label: "Work Stream" },
         { key: "workType", label: "Work Type" },
+        { key: "engrPlanYear", label: "Engineering Plan Year" },
+        { key: "constPlanYear", label: "Construction Plan Year" },
+        { key: "commitmentDate", label: "Commitment Date" }
       ]
     },
     {
@@ -124,11 +206,9 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
         { key: "city", label: "City" },
         { key: "county", label: "County" },
         { key: "mp1", label: "MP1" },
-        { key: "mp2", label: "MP2" },
+        { key: "mp2", label: "MP2" }
       ]
     },
-
-
     {
       title: "Project Team",
       fields: [
@@ -138,14 +218,14 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
         { key: "projectEngineer", label: "Project Engineer" },
         { key: "designEstimator", label: "Design Estimator" },
         { key: "constructionContractor", label: "Construction Contractor" },
-        { key: "ade", label: "ADE" }
+        { key: "ade", label: "ADE" },
+        { key: "postEstimate", label: "Post Estimate" }
       ]
     },
     {
       title: "Design Milestones",
       fields: [
-        { key: "engrPlanYear", label: "Engineering Plan Year" },
-        { key: "thirtyPercentDesignReviewMeeting", label: "30% Design Review Meeting"},
+        { key: "thirtyPercentDesignReviewMeeting", label: "30% Design Review Meeting" },
         { key: "thirtyPercentDesignAvailable", label: "30% Design Available" },
         { key: "sixtyPercentDesignReviewMeeting", label: "60% Design Review Meeting" },
         { key: "sixtyPercentDesignAvailable", label: "60% Design Available" },
@@ -155,7 +235,7 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
       ]
     },
     {
-      title: "Estimating Milestones",
+      title: "Estimate Classes",
       fields: [
         { key: "class5", label: "Class 5" },
         { key: "class4", label: "Class 4" },
@@ -170,11 +250,9 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
     {
       title: "Construction Milestones",
       fields: [
-        { key: "constPlanYear", label: "Construction Plan Year" },
-        { key: "commitmentDate", label: "Commitment Date" },
         { key: "ntp", label: "NTP" },
         { key: "mob", label: "MOB" },
-        { key: "tieIn", label: "Tie-in" },
+        { key: "tieIn", label: "Tie-In" },
         { key: "enro", label: "ENRO" },
         { key: "unitCapture", label: "Unit Capture" }
       ]
@@ -198,9 +276,19 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
           justifyContent: "space-between",
           alignItems: "center"
         }}>
-          <Typography variant="h6" id="project-details-dialog-title" sx={{ fontWeight: "bold" }}>
-            Project Details: {project.pmoId} - {project.order}
-          </Typography>
+          <Box
+            id="project-details-dialog-title"
+            component="h6"
+            sx={{
+              margin: 0,
+              fontWeight: "bold",
+              fontSize: "1.25rem",
+              lineHeight: 1.6,
+              letterSpacing: "0.0075em"
+            }}
+          >
+            {createTitleText(project.pmoId, project.order, "Project Details: ")}
+          </Box>
           <Box sx={{ display: "flex", gap: 1 }}>
             <Button
               onClick={() => setShowNotes(true)}
@@ -232,7 +320,22 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={activeTab} onChange={handleTabChange} aria-label="project details tabs">
             <Tab label="Details" id="tab-0" aria-controls="tabpanel-0" />
-            <Tab label="Change History" id="tab-1" aria-controls="tabpanel-1" />
+            <Tab 
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Change History
+                  {projectChanges.length > 0 && (
+                    <AlertTriangle 
+                      size={16} 
+                      color="var(--warning-color, #ff9800)"
+                      style={{ marginBottom: -2 }}
+                    />
+                  )}
+                </Box>
+              } 
+              id="tab-1" 
+              aria-controls="tabpanel-1" 
+            />
           </Tabs>
         </Box>
 
@@ -245,39 +348,48 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
             aria-labelledby="tab-0"
             style={{ padding: 'var(--spacing-md)' }}
           >
-            {sections.map((section, index) => (
-              <Box key={index} sx={{ marginBottom: "var(--spacing-lg)" }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: "bold", 
-                  marginBottom: "var(--spacing-sm)",
-                  color: "var(--primary-color)"
-                }}>
-                  {section.title}
-                </Typography>
-                <Divider sx={{ marginBottom: "var(--spacing-md)" }} />
-                <Box sx={{ 
-                  display: "grid", 
-                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                  gap: "var(--spacing-md)"
-                }}>
-                  {section.fields.map((field, fieldIndex) => (
-                    <Box key={fieldIndex} sx={{ marginBottom: "var(--spacing-sm)" }}>
-                      <Typography variant="subtitle2" sx={{ 
-                        fontWeight: "bold",
-                        color: "var(--text-secondary)"
-                      }}>
-                        {field.label}
-                      </Typography>
-                      <Typography variant="body1">
-                        {project[field.key as keyof Project] !== undefined && project[field.key as keyof Project] !== null 
-                          ? String(project[field.key as keyof Project]) 
-                          : "-"}
-                      </Typography>
-                    </Box>
-                  ))}
+            <Box sx={{ padding: 'var(--spacing-md)' }}>
+              {sections.map((section, sectionIndex) => (
+                <Box key={section.title} sx={{ marginBottom: "var(--spacing-lg)" }}>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: "bold", 
+                    marginBottom: "var(--spacing-sm)",
+                    color: "var(--primary-color)"
+                  }}>
+                    {section.title}
+                  </Typography>
+                  <Divider sx={{ marginBottom: "var(--spacing-md)" }} />
+                  <Box sx={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                    gap: "var(--spacing-md)"
+                  }}>
+                    {section.fields.map((field) => {
+                      const value = project[field.key];
+                      const displayValue = formatValue(value);
+                      return (
+                        <Box key={field.key} sx={{ marginBottom: "var(--spacing-sm)" }}>
+                          <Typography variant="subtitle2" sx={{ 
+                            fontWeight: "bold",
+                            color: "var(--text-secondary)"
+                          }}>
+                            {field.label}
+                          </Typography>
+                          <Box sx={{ 
+                            fontFamily: 'var(--font-family)',
+                            fontSize: 'var(--font-size-md)',
+                            color: 'var(--text-primary)'
+                          }}>
+                            {displayValue}
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                  {sectionIndex < sections.length - 1 && <Divider sx={{ margin: "16px 0" }} />}
                 </Box>
-              </Box>
-            ))}
+              ))}
+            </Box>
           </div>
 
           {/* Change History Tab */}
@@ -307,8 +419,9 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ backgroundColor: 'var(--bg-secondary, #f5f5f5)' }}>
+                        <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Project Change Type</th>
+                        <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>PMO ID</th>
                         <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Field</th>
-                        <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Change Type</th>
                         <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Old Value</th>
                         <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>New Value</th>
                       </tr>
@@ -316,7 +429,6 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
                     <tbody>
                       {projectChanges.map((change, index) => (
                         <tr key={index} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 12 }}>{change.field_name}</td>
                           <td style={{ padding: 12 }}>
                             <span style={{ 
                               color: getChangeTypeColor(change.change_type),
@@ -328,8 +440,10 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
                               {change.change_type}
                             </span>
                           </td>
-                          <td style={{ padding: 12 }}>{change.old_value || '-'}</td>
-                          <td style={{ padding: 12 }}>{change.new_value || '-'}</td>
+                          <td style={{ padding: 12 }}>{project.pmoId}</td>
+                          <td style={{ padding: 12 }}>{formatFieldName(change.field_name)}</td>
+                          <td style={{ padding: 12 }}>{formatDate(change.old_value || '-')}</td>
+                          <td style={{ padding: 12 }}>{formatDate(change.new_value || '-')}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -371,7 +485,7 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
         </Box>
       </Dialog>
 
-      {/* Render the notes dialog conditionally to avoid nesting issues */}
+      {/* Notes Dialog */}
       {showNotes && (
         <Dialog
           open={true}
@@ -379,11 +493,9 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
           maxWidth="sm"
           fullWidth
           aria-labelledby="notes-dialog-title"
-          // Ensure this dialog is not hidden from screen readers
           hideBackdrop={false}
           disableEnforceFocus={false}
           disableAutoFocus={false}
-          // Use a different container to avoid nesting dialogs
           container={document.body}
         >
           <Box sx={{
@@ -394,9 +506,19 @@ const ProjectDetails = ({ project, onClose }: ProjectDetailsProps) => {
             justifyContent: "space-between",
             alignItems: "center"
           }}>
-            <Typography variant="h6" id="notes-dialog-title" sx={{ fontWeight: "bold" }}>
-              Notes for {project.pmoId} - {project.order}
-            </Typography>
+            <Box
+              id="notes-dialog-title"
+              component="h6"
+              sx={{
+                margin: 0,
+                fontWeight: "bold",
+                fontSize: "1.25rem",
+                lineHeight: 1.6,
+                letterSpacing: "0.0075em"
+              }}
+            >
+              {createTitleText(project.pmoId, project.order, "Notes for ")}
+            </Box>
             <Button
               onClick={handleCloseNotes}
               sx={{

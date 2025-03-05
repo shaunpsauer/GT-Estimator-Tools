@@ -30,7 +30,6 @@ const debounceApiCall = async (key: string, apiCall: () => Promise<any>) => {
 };
 
 // Interface for database project (with order_number instead of order)
-// Export the interface to make it usable elsewhere and avoid the "declared but never used" error
 export interface DbProject {
   id: number;
   costEstimator: string;
@@ -97,6 +96,7 @@ export interface ExcelProjectChange {
   id: number;
   project_id: number;
   project_name: string;
+  pmoId: string;
   old_upload_id: number | null;
   new_upload_id: number;
   field_name: string;
@@ -116,7 +116,8 @@ function dbToFrontendProject(dbProject: DbProject): Project {
   
   return {
     ...rest,
-    order: order_number || '', // Convert order_number to order for frontend
+    // If order is already set (server converted it), use that, otherwise use order_number
+    order: (rest as any).order || order_number || '',
     engrPlanYear,
     constPlanYear,
   } as Project;
@@ -124,7 +125,7 @@ function dbToFrontendProject(dbProject: DbProject): Project {
 
 // Helper function to convert frontend model to database model
 function frontendToDbProject(project: Project): DbProject {
-  // Extract order to convert to order_number
+  // Extract fields to convert
   const { order, engrPlanYear, constPlanYear, ...rest } = project;
   
   // Convert numeric fields to strings for the database

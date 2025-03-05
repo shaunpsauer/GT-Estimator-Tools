@@ -5,11 +5,17 @@ export interface ProjectChanges {
 export interface Project {
   id: number;
   costEstimator: string;
+  costEstimatorRequest: string;
   projectManager: string;
+  projectEngineer: string;
+  designEstimator: string;
   constructionContractor: string;
   ade: string;
   pmoId: string;
   order: string;
+  multipleOrder: string;
+  bundleId: string;
+  postEstimate: string;
   mat: string;
   projectName: string;
   workStream: string;
@@ -17,6 +23,15 @@ export interface Project {
   engrPlanYear: number;
   constPlanYear: number;
   commitmentDate: string;
+  station: string;
+  line: string;
+  city: string;
+  county: string;
+  mp1: string;
+  mp2: string;
+  tieIn: string;
+  enro: string;
+  unitCapture: string;
   thirtyPercentDesignReviewMeeting: string;
   thirtyPercentDesignAvailable: string;
   sixtyPercentDesignReviewMeeting: string;
@@ -34,17 +49,11 @@ export interface Project {
   estimateAnalysis: string;
   ntp: string;
   mob: string;
-  mp1: string;
-  mp2: string;
-  line: string;
-  tieIn: string;
-  city: string;
-  county: string;
   last_updated?: string;
   is_changed?: boolean;
   _changes?: ProjectChanges;
   dateCategory?: DateCategory;
-  [key: string]: string | number | boolean | undefined | ProjectChanges | undefined;
+  order_number?: string; // For backward compatibility
 }
 
 export interface VisibleColumns {
